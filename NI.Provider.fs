@@ -551,9 +551,9 @@
     // Kerberos Section
     ///////////////////
 
-    let impersonateSystem =
+    let private impersonateSystem =
     // finds, opens and duplicates a SYSTEM process, performs the impersonation, then drops
-    // the handles.
+    // the handles. Blows up dramatically if user isn't in the Administrator role.
         let mutable procHandle = IntPtr.Zero
         let mutable dupToken = IntPtr.Zero
         
@@ -561,7 +561,7 @@
             Process.GetProcessesByName("winlogon")
             |> Array.head
          
-        match (OpenProcessToken(IntPtr.Zero, 0x0002u, &procHandle) &&
+        match (OpenProcessToken(sysProcess.Handle, 0x0002u, &procHandle) &&
                (DuplicateToken(procHandle, 2, &dupToken)) &&
                (ImpersonateLoggedOnUser(dupToken))) with
         | true -> printfn "Impersonating %s" (WindowsIdentity.GetCurrent().Name)
