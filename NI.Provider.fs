@@ -1,7 +1,11 @@
 ﻿module Fetters.NI.Providers
 
     open System
+    open System.Diagnostics
     open System.Runtime.InteropServices
+    open System.Security.Principal
+
+    open Fetters.dotNetFunctions
     open Fetters.DomainTypes
 
     /////////////////////////////
@@ -316,23 +320,23 @@
                          [<Out>] IntPtr& phToken)
 
     [<DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)>]
-    //unverfied
-    extern bool OpenProcessToken(IntPtr& processHandle, 
+    //verfied - wrong byref on processHandle 
+    extern bool OpenProcessToken(IntPtr processHandle, 
                                 uint32 desiredAccess, 
                                 [<Out>] IntPtr& tokenHandle)
 
     [<DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)>]
-    //unverfied
-    extern bool DuplicateToken(IntPtr& existingTokenHandle, 
+    //verified - wrong byref on existingTokenHandle
+    extern bool DuplicateToken(IntPtr existingTokenHandle, 
                               int impersonationLevel, 
                               [<Out>] IntPtr& duplicatTokenHandle)
 
     [<DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)>]
-    //unverfied
-    extern bool ImpersonateLoggedOnUser(IntPtr& tokenHandle)
+    //verified  - wrong byref on tokenHandle
+    extern bool ImpersonateLoggedOnUser(IntPtr tokenHandle)
 
     [<DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)>]
-    //unverfied
+    //unverified
     extern bool RevertToSelf()
 
     [<DllImport("kernel32.dll")>]
@@ -446,10 +450,8 @@
     // Helper function for extracting IP address strings from the 
     // WTS_CLIENT_ADDRESS struct
         let _a = Marshal.PtrToStructure<WTS_CLIENT_ADDRESS>(ppBuffer)
-        let netStringAddress = System.Net.IPAddress(_a.addressRaw.[2..5])
-        netStringAddress
-
-
+        System.Net.IPAddress(_a.addressRaw.[2..5])
+        
     let private rdpSessionReverseLookup sessionID =
     // Helper function to do a reverse IP lookup on a given Session ID
         let mutable server = WTSOpenServer("localhost")
@@ -468,7 +470,7 @@
         | false -> System.Net.IPAddress.None
 
     let enumerateRdpSessions =
-    // Returns a RdpSession record list of local sessions meeting the filter,
+    // Returns a RdpSession record list option of local sessions meeting the filter,
     // namely that they contain the name "RDP" in the session. We don't want
     // non-Rdp sessions in this output.
         let server = WTSOpenServer("localhost")
@@ -506,6 +508,8 @@
 
     let populateGroupMemberStruct bufferPtr entriesRead =
     // Helper function for populating the LOCAL_GROUP_MEMBER structs
+    // I feel like this should actualy use mutability, because it's not necessarily
+    // clear that the `memberStructs` thta gets passed back is a copy?
         let memberStructs = Array.create entriesRead (LOCAL_GROUP_MEMBER_INFO2())
         let mutable _b = bufferPtr
         memberStructs 
@@ -524,7 +528,8 @@
 
         let returnValue = 
             NetLocalGroupGetMembers("", groupName, 2, &bufPtr, -1, &entRead, &totEntries, rHandle)
-
+        
+        // kinda awkward, but we don't deal with errors at this point.
         let members = 
             match returnValue with
             | 0 -> populateGroupMemberStruct bufPtr entRead
@@ -537,11 +542,35 @@
             |> Array.filter(fun _f -> not (_f.lgrmi2_sid = IntPtr.Zero))
             |> Array.map(fun _m -> _m.lgrmi2_domainandname) 
             |> Array.toList 
-        
+        // None means there was an error in the NLGGM call, or the group doesn't exist. 
         match groupMemberList with
         | x when groupMemberList.Length > 0 -> Some groupMemberList
         | _ -> None
 
+    ///////////////////
+    // Kerberos Section
+    ///////////////////
 
+    let impersonateSystem =
+    // finds, opens and duplicates a SYSTEM process, performs the impersonation, then drops
+    // the handles.
+        let mutable procHandle = IntPtr.Zero
+        let mutable dupToken = IntPtr.Zero
+        
+        let sysProcess = 
+            Process.GetProcessesByName("winlogon")
+            |> Array.head
+         
+        match (OpenProcessToken(IntPtr.Zero, 0x0002u, &procHandle) &&
+               (DuplicateToken(procHandle, 2, &dupToken)) &&
+               (ImpersonateLoggedOnUser(dupToken))) with
+        | true -> printfn "Impersonating %s" (WindowsIdentity.GetCurrent().Name)
+        | false -> printfn "Failed to impersonate SYSTEM with error %i" (Marshal.GetLastWin32Error())
+        
+            
 
-    // LSA pain goes here...
+    let getSystem() = 
+    // Impersonate the NTAUTHORITY\SYSTEM user for the purposes of high integrity actions.
+        match (getCurrentRole(WindowsBuiltInRole.Administrator)) with
+        | true -> "" //do the thing
+        | false -> "" //can't do the thing

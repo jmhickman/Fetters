@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <Compile Include="Domain_Types.fs" />
+    <Compile Include="dotNetFunctions.fs" />
     <Compile Include="WMI.Provider.fs" />
     <Compile Include="NI.Provider.fs" />
     <Compile Include="Program.fs" />
