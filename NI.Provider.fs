@@ -469,7 +469,7 @@
         | true -> rdpSessionGetAddress ppBuffer 
         | false -> System.Net.IPAddress.None
 
-    let enumerateRdpSessions =
+    let enumerateRdpSessions () =
     // Returns a RdpSession record list option of local sessions meeting the filter,
     // namely that they contain the name "RDP" in the session. We don't want
     // non-Rdp sessions in this output.
@@ -551,7 +551,7 @@
     // Kerberos Section
     ///////////////////
 
-    let private impersonateSystem =
+    let private impersonateSystem () = 
     // finds, opens and duplicates a SYSTEM process, performs the impersonation, then drops
     // the handles. Blows up dramatically if user isn't in the Administrator role.
         let mutable procHandle = IntPtr.Zero
@@ -560,17 +560,20 @@
         let sysProcess = 
             Process.GetProcessesByName("winlogon")
             |> Array.head
-         
+        printfn "currently: %s" (WindowsIdentity.GetCurrent().Name)
         match (OpenProcessToken(sysProcess.Handle, 0x0002u, &procHandle) &&
-               (DuplicateToken(procHandle, 2, &dupToken)) &&
-               (ImpersonateLoggedOnUser(dupToken))) with
-        | true -> printfn "Impersonating %s" (WindowsIdentity.GetCurrent().Name)
-        | false -> printfn "Failed to impersonate SYSTEM with error %i" (Marshal.GetLastWin32Error())
+               DuplicateToken(procHandle, 2, &dupToken) &&
+               ImpersonateLoggedOnUser(dupToken)) with
+        |true -> sprintf "Impersonating %s" (WindowsIdentity.GetCurrent().Name)
+        |false -> sprintf "Failed to impersonate SYSTEM, error: %i" (Marshal.GetLastWin32Error())
         
-            
+    let private revertToSelf () = 
+        match RevertToSelf() with
+        | true -> true
+        | false -> false
 
-    let getSystem() = 
+    let getSystem () = 
     // Impersonate the NTAUTHORITY\SYSTEM user for the purposes of high integrity actions.
-        match (getCurrentRole(WindowsBuiltInRole.Administrator)) with
-        | true -> "" //do the thing
-        | false -> "" //can't do the thing
+        match (getCurrentRole WindowsBuiltInRole.Administrator) with
+        | true -> impersonateSystem ()
+        | false -> sprintf "Current role cannot escalate privileges"
