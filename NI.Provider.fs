@@ -560,14 +560,17 @@
         let sysProcess = 
             Process.GetProcessesByName("winlogon")
             |> Array.head
-        printfn "currently: %s" (WindowsIdentity.GetCurrent().Name)
-        match (OpenProcessToken(sysProcess.Handle, 0x0002u, &procHandle) &&
-               DuplicateToken(procHandle, 2, &dupToken) &&
-               ImpersonateLoggedOnUser(dupToken)) with
-        |true -> sprintf "Impersonating %s" (WindowsIdentity.GetCurrent().Name)
-        |false -> sprintf "Failed to impersonate SYSTEM, error: %i" (Marshal.GetLastWin32Error())
+        let result = 
+            match (OpenProcessToken(sysProcess.Handle, 0x0002u, &procHandle) &&
+                   DuplicateToken(procHandle, 2, &dupToken) &&
+                   ImpersonateLoggedOnUser(dupToken)) with
+            |true -> sprintf "Impersonating %s" (WindowsIdentity.GetCurrent().Name)
+            |false -> sprintf "Failed to impersonate SYSTEM, error: %i" (Marshal.GetLastWin32Error())
+        CloseHandle(dupToken) |> ignore
+        CloseHandle(procHandle) |> ignore
+        result
         
-    let private revertToSelf () = 
+    let revertToSelf () = 
         match RevertToSelf() with
         | true -> true
         | false -> false
@@ -577,3 +580,5 @@
         match (getCurrentRole WindowsBuiltInRole.Administrator) with
         | true -> impersonateSystem ()
         | false -> sprintf "Current role cannot escalate privileges"
+        
+

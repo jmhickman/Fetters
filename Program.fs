@@ -9,5 +9,4 @@ open Fetters.dotNetFunctions
 let signs = {
         user = User{name="";domain="";sid=""}
         disk = Disk{name="";size="";mountpoint=""}}
-
-printfn "%s" (getSystem())
+printf "%s" (getSystem())
