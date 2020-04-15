@@ -25,6 +25,7 @@
     let wmiGroupQuery = 
         {wmiSqlQuery = "Select * from Win32_Group  Where LocalAccount = True"
          wmiFilterList = ["Name";"SID";]}
+
     /////////////////////////////////
     // WMI Management Object Creation
     /////////////////////////////////

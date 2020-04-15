@@ -328,5 +328,12 @@ module Fetters.DomainTypes
     // Native Call Types
     ////////////////////
 
+    // the handles for the Kerberos enum are difficult to track because of the enormous
+    // code structure differences between Seatbelt and Fetters. To help keep the handles
+    // and pointers and such straight, I'm going to make them Types.
 
+    type LsaProcessHandle = LsaProcessHandle of IntPtr
 
+    type LsaAuthPackage = LsaAuthPackage of int
+
+    type LUIDPtr = LUIDPtr of IntPtr

@@ -151,7 +151,6 @@
 
     [<Struct>]
     [<StructLayout(LayoutKind.Sequential)>]
-    //unverfied
     type LSA_STRING_IN =
         val mutable length : uint16
         val mutable maxLength : uint16
@@ -320,19 +319,16 @@
                          [<Out>] IntPtr& phToken)
 
     [<DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)>]
-    //verfied - wrong byref on processHandle 
     extern bool OpenProcessToken(IntPtr processHandle, 
                                 uint32 desiredAccess, 
                                 [<Out>] IntPtr& tokenHandle)
 
     [<DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)>]
-    //verified - wrong byref on existingTokenHandle
     extern bool DuplicateToken(IntPtr existingTokenHandle, 
                               int impersonationLevel, 
                               [<Out>] IntPtr& duplicatTokenHandle)
 
     [<DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)>]
-    //verified  - wrong byref on tokenHandle
     extern bool ImpersonateLoggedOnUser(IntPtr tokenHandle)
 
     [<DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)>]
@@ -361,20 +357,18 @@
     extern int LsaConnectUntrusted([<Out>] IntPtr& lsaHandle)
 
     [<DllImport("secur32.dll", SetLastError = true)>]
-    //unverified
-    extern int LsaRegisterLogonProcess(LSA_STRING_IN logonProcessName, 
+    extern int LsaRegisterLogonProcess(LSA_STRING_IN& logonProcessName, 
                                       [<Out>] IntPtr& lsaHandle, 
-                                      [<Out>] uint64 securityMode)
+                                      [<Out>] uint64& securityMode)
 
     [<DllImport("secur32.dll", SetLastError = true)>]
     //unverified
     extern int LsaDeregisterLogonProcess([<In>] IntPtr& lsaHandle)
 
     [<DllImport("secur32.dll", SetLastError = true)>]
-    //unverfied
-    extern int LsaLookupAuthenticationPackage(IntPtr& lsaHandle, 
+    extern int LsaLookupAuthenticationPackage(IntPtr lsaHandle, 
                                              LSA_STRING_IN packageName, 
-                                             [<Out>] int authenticationPackage)
+                                             [<Out>] int& authenticationPackage)
 
     [<DllImport("secur32.dll", SetLastError = true)>]
     //unverified
@@ -391,12 +385,10 @@
     extern uint32 LsaFreeReturnBuffer(IntPtr buffer)
 
     [<DllImport("secur32.dll", SetLastError = true)>]
-    //unverified
-    extern uint32 LsaEnumerateLogonSessions([<Out>] uint64 logonSessionCount, [<Out>] IntPtr logonSessionList)
+    extern uint32 LsaEnumerateLogonSessions([<Out>] uint64& logonSessionCount, [<Out>] IntPtr& logonSessionList)
 
     [<DllImport("secur32.dll", SetLastError = true)>]
-    //unverified
-    extern uint32 LsaGetLogonSessionData(IntPtr luid, [<Out>] IntPtr ppLogonSessionData )
+    extern uint32 LsaGetLogonSessionData(IntPtr luid, [<Out>] IntPtr& ppLogonSessionData )
 
     [<DllImport("wtsapi32.dll", SetLastError = true)>]
     extern int WTSEnumerateSessionsEx(IntPtr hServer,
@@ -547,13 +539,14 @@
         | x when groupMemberList.Length > 0 -> Some groupMemberList
         | _ -> None
 
-    ///////////////////
-    // Kerberos Section
-    ///////////////////
+    //////////////////////
+    // Impersonation Calls 
+    //////////////////////
 
     let private impersonateSystem () = 
     // finds, opens and duplicates a SYSTEM process, performs the impersonation, then drops
     // the handles. Blows up dramatically if user isn't in the Administrator role.
+    // This should probably return a Result< >, but I don't understand how to do those yet.
         let mutable procHandle = IntPtr.Zero
         let mutable dupToken = IntPtr.Zero
         
@@ -564,10 +557,13 @@
             match (OpenProcessToken(sysProcess.Handle, 0x0002u, &procHandle) &&
                    DuplicateToken(procHandle, 2, &dupToken) &&
                    ImpersonateLoggedOnUser(dupToken)) with
-            |true -> sprintf "Impersonating %s" (WindowsIdentity.GetCurrent().Name)
-            |false -> sprintf "Failed to impersonate SYSTEM, error: %i" (Marshal.GetLastWin32Error())
+            |true -> sprintf "Impersonating %s" <| WindowsIdentity.GetCurrent().Name
+            |false -> sprintf "Failed to impersonate SYSTEM, error: %i" 
+                              <| Marshal.GetLastWin32Error()
+
         CloseHandle(dupToken) |> ignore
         CloseHandle(procHandle) |> ignore
+
         result
         
     let revertToSelf () = 
@@ -581,4 +577,57 @@
         | true -> impersonateSystem ()
         | false -> sprintf "Current role cannot escalate privileges"
         
+    /////////////////
+    // Kerberos Calls
+    /////////////////
+
+    let registerLsaLogonProcess () : LsaProcessHandle =
+    // We use the LsaProcessHandle later in the important call to LsaCallAuthenticationPackage
+        let mutable lsaProcessHandle = IntPtr.Zero
+        let mutable securityMode = 0UL
+        let registeredProcessName = "SomethingCustom"
+
+        let mutable configString = LSA_STRING_IN(length = uint16(registeredProcessName.Length), maxLength = uint16(registeredProcessName.Length + 1), buffer = registeredProcessName)
+
+        let ntstatus = LsaRegisterLogonProcess(&configString, &lsaProcessHandle, &securityMode)
+        (LsaProcessHandle lsaProcessHandle)
+
+    let enumerateLsaLogonSessions () =
+        let mutable countOfLUIDs = 0UL
+        let mutable luidPtr = IntPtr.Zero
+
+        let ntstatus = LsaEnumerateLogonSessions(&countOfLUIDs, &luidPtr)
+        (countOfLUIDs, (LUIDPtr luidPtr))
+
+    let getLsaSessionData (luidPtr: LUIDPtr) (count: uint64) : SECURITY_LOGON_SESSION_DATA list =
+    // Returns a filtered list of SECURITY_LOGON_SESSION_DATA structs. Seatbelt only processed
+    // results with a pSID, so that's what we're doing. I don't know what the Some/None on this
+    // should be, so I'm leaving it out for now.
+        let mutable sessionDataPtr = IntPtr.Zero
+        let mutable (LUIDPtr _luidPtr) = luidPtr
+
+        let sessionDataArray = Array.create (int(count)) (SECURITY_LOGON_SESSION_DATA())
+
+        LsaGetLogonSessionData(_luidPtr, &sessionDataPtr) |> ignore
+        
+        sessionDataArray
+        |> Array.map(fun _sessionData -> let _sessionData = Marshal.PtrToStructure<SECURITY_LOGON_SESSION_DATA>(sessionDataPtr)
+                                         sessionDataPtr <- IntPtr.Add(sessionDataPtr, Marshal.SizeOf<SECURITY_LOGON_SESSION_DATA>())
+                                         _sessionData)
+        |> Array.filter(fun _s -> not(_s.pSID = IntPtr.Zero)) // We only want results where there is a pSID
+        |> Array.toList
+
+    let lookupLsaAuthenticationPackage 
+        (lsaHandle: LsaProcessHandle) (lsaKerberosString: LSA_STRING_IN) : LsaAuthPackage = 
+    // This call is around to generate authpkgs for the later call to LsaCallAuthenticationPackage
+    // which is where the magic happens, I suppose. Leveraging types again to help keep the 
+    // handles and pointer types straight.
+        let mutable (LsaProcessHandle _lsaHandle) = lsaHandle
+        let mutable _authPkg = 0
+                
+        let ntstatus = LsaLookupAuthenticationPackage(_lsaHandle, lsaKerberosString, &_authPkg)
+        printfn "%i::%i::%i" _lsaHandle ntstatus _authPkg
+        (LsaAuthPackage _authPkg)
+
+
 
