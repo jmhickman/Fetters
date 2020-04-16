@@ -372,13 +372,13 @@
 
     [<DllImport("secur32.dll", SetLastError = true)>]
     //unverified
-    extern int LsaCallAuthenticationPackage(IntPtr& lsaHandle, 
+    extern int LsaCallAuthenticationPackage(IntPtr lsaHandle, 
                                            int authenticationPackage, 
                                            KERB_QUERY_TKT_CACHE_REQUEST& protocolSubmitBuffer, 
                                            int submitBufferLength, 
                                            [<Out>] IntPtr& protocolReturnBuffer, 
-                                           [<Out>] int returnBufferLength, 
-                                           [<Out>] int protocolStatus)
+                                           [<Out>] int& returnBufferLength, 
+                                           [<Out>] int& protocolStatus)
                                             
     [<DllImport("secur32.dll", SetLastError = true)>]
     //unverified
@@ -429,7 +429,7 @@
     ////////////////////////////////
     
     let private populateRdpSessionStructs ppSessionBaseAddr count =
-    // Helper function to pull unmanaged info into managed code 
+        // Helper function to pull unmanaged info into managed code 
         let mutable _ppSBA = ppSessionBaseAddr
         let enumSessions = Array.create count (WTS_SESSION_INFO_1())
         enumSessions 
@@ -439,13 +439,13 @@
 
 
     let private rdpSessionGetAddress ppBuffer = 
-    // Helper function for extracting IP address strings from the 
-    // WTS_CLIENT_ADDRESS struct
+        // Helper function for extracting IP address strings from the 
+        // WTS_CLIENT_ADDRESS struct
         let _a = Marshal.PtrToStructure<WTS_CLIENT_ADDRESS>(ppBuffer)
         System.Net.IPAddress(_a.addressRaw.[2..5])
         
     let private rdpSessionReverseLookup sessionID =
-    // Helper function to do a reverse IP lookup on a given Session ID
+        // Helper function to do a reverse IP lookup on a given Session ID
         let mutable server = WTSOpenServer("localhost")
         let mutable ppBuffer = IntPtr.Zero
         let mutable pBytesReturned = 0
@@ -462,9 +462,9 @@
         | false -> System.Net.IPAddress.None
 
     let enumerateRdpSessions () =
-    // Returns a RdpSession record list option of local sessions meeting the filter,
-    // namely that they contain the name "RDP" in the session. We don't want
-    // non-Rdp sessions in this output.
+        // Returns a RdpSession record list option of local sessions meeting the filter,
+        // namely that they contain the name "RDP" in the session. We don't want
+        // non-Rdp sessions in this output.
         let server = WTSOpenServer("localhost")
         let mutable ppSessionInfo = IntPtr.Zero
         let mutable count = 0
@@ -488,6 +488,7 @@
                                        username = _sess.pUserName;
                                        remoteAddress = (rdpSessionReverseLookup _sess.SessionID)})
             |> Array.toList
+
         match enumList with
         | x when x.Length > 0 -> Some enumList
         | _ -> None
@@ -498,21 +499,24 @@
     // Local Group Enumeration Calls
     ////////////////////////////////
 
-    let populateGroupMemberStruct bufferPtr entriesRead =
-    // Helper function for populating the LOCAL_GROUP_MEMBER structs
-    // I feel like this should actualy use mutability, because it's not necessarily
-    // clear that the `memberStructs` thta gets passed back is a copy?
+    let populateGroupMemberStruct 
+        (bufferPtr: IntPtr) 
+        (entriesRead: int) =
+        // Helper function for populating the LOCAL_GROUP_MEMBER structs
+        // I feel like this should actualy use mutability, because it's not necessarily
+        // clear that the `memberStructs` thta gets passed back is a copy?
         let memberStructs = Array.create entriesRead (LOCAL_GROUP_MEMBER_INFO2())
         let mutable _b = bufferPtr
+        
         memberStructs 
         |> Array.map(fun _m -> let _m = Marshal.PtrToStructure<LOCAL_GROUP_MEMBER_INFO2>(_b)
                                _b <- IntPtr.Add(_b, Marshal.SizeOf<LOCAL_GROUP_MEMBER_INFO2>())
                                _m)
         
 
-    let getLocalGroupMembership groupName =
-    // Enumerates the members of a local group. Will emit a None on empty 
-    // groups or if there was a non-0 return code.
+    let getLocalGroupMembership (groupName: string) =
+        // Enumerates the members of a local group. Will emit a None on empty 
+        // groups or if there was a non-0 return code.
         let mutable bufPtr = IntPtr.Zero
         let mutable rHandle = IntPtr.Zero
         let mutable entRead = 0
@@ -544,9 +548,9 @@
     //////////////////////
 
     let private impersonateSystem () = 
-    // finds, opens and duplicates a SYSTEM process, performs the impersonation, then drops
-    // the handles. Blows up dramatically if user isn't in the Administrator role.
-    // This should probably return a Result< >, but I don't understand how to do those yet.
+        // finds, opens and duplicates a SYSTEM process, performs the impersonation, then drops
+        // the handles. Blows up dramatically if user isn't in the Administrator role.
+        // This should probably return a Result< >, but I don't understand how to do those yet.
         let mutable procHandle = IntPtr.Zero
         let mutable dupToken = IntPtr.Zero
         
@@ -572,7 +576,7 @@
         | false -> false
 
     let getSystem () = 
-    // Impersonate the NTAUTHORITY\SYSTEM user for the purposes of high integrity actions.
+        // Impersonate the NTAUTHORITY\SYSTEM user for the purposes of high integrity actions.
         match (getCurrentRole WindowsBuiltInRole.Administrator) with
         | true -> impersonateSystem ()
         | false -> sprintf "Current role cannot escalate privileges"
@@ -582,27 +586,34 @@
     /////////////////
 
     let registerLsaLogonProcess () : LsaProcessHandle =
-    // We use the LsaProcessHandle later in the important call to LsaCallAuthenticationPackage
+        // We use the LsaProcessHandle later in the important call to LsaCallAuthenticationPackage
         let mutable lsaProcessHandle = IntPtr.Zero
         let mutable securityMode = 0UL
         let registeredProcessName = "SomethingCustom"
 
-        let mutable configString = LSA_STRING_IN(length = uint16(registeredProcessName.Length), maxLength = uint16(registeredProcessName.Length + 1), buffer = registeredProcessName)
+        let mutable configString = 
+            LSA_STRING_IN(length = uint16(registeredProcessName.Length), 
+                          maxLength = uint16(registeredProcessName.Length + 1), 
+                          buffer = registeredProcessName)
 
-        let ntstatus = LsaRegisterLogonProcess(&configString, &lsaProcessHandle, &securityMode)
+        LsaRegisterLogonProcess(&configString, &lsaProcessHandle, &securityMode) |> ignore
         (LsaProcessHandle lsaProcessHandle)
 
     let enumerateLsaLogonSessions () =
+        // As it says on the tin.
         let mutable countOfLUIDs = 0UL
         let mutable luidPtr = IntPtr.Zero
 
         let ntstatus = LsaEnumerateLogonSessions(&countOfLUIDs, &luidPtr)
         (countOfLUIDs, (LUIDPtr luidPtr))
 
-    let getLsaSessionData (luidPtr: LUIDPtr) (count: uint64) : SECURITY_LOGON_SESSION_DATA list =
-    // Returns a filtered list of SECURITY_LOGON_SESSION_DATA structs. Seatbelt only processed
-    // results with a pSID, so that's what we're doing. I don't know what the Some/None on this
-    // should be, so I'm leaving it out for now.
+    let getLsaSessionData 
+        (luidPtr: LUIDPtr) 
+        (count: uint64) 
+        : SECURITY_LOGON_SESSION_DATA list =
+        // Returns a filtered list of SECURITY_LOGON_SESSION_DATA structs. Seatbelt only processed
+        // results with a pSID, so that's what we're doing. I don't know what the Some/None on this
+        // should be, so I'm leaving it out for now.
         let mutable sessionDataPtr = IntPtr.Zero
         let mutable (LUIDPtr _luidPtr) = luidPtr
 
@@ -618,16 +629,40 @@
         |> Array.toList
 
     let lookupLsaAuthenticationPackage 
-        (lsaHandle: LsaProcessHandle) (lsaKerberosString: LSA_STRING_IN) : LsaAuthPackage = 
-    // This call is around to generate authpkgs for the later call to LsaCallAuthenticationPackage
-    // which is where the magic happens, I suppose. Leveraging types again to help keep the 
-    // handles and pointer types straight.
+        (lsaHandle: LsaProcessHandle) 
+        (lsaKerberosString: LSA_STRING_IN) 
+        : LsaAuthPackage = 
+        // This call is around to generate authpkgs for the later call to LsaCallAuthenticationPackage
+        // which is where the magic happens, I suppose. Leveraging types again to help keep the 
+        // handles and pointer types straight.
         let mutable (LsaProcessHandle _lsaHandle) = lsaHandle
         let mutable _authPkg = 0
                 
-        let ntstatus = LsaLookupAuthenticationPackage(_lsaHandle, lsaKerberosString, &_authPkg)
-        printfn "%i::%i::%i" _lsaHandle ntstatus _authPkg
+        LsaLookupAuthenticationPackage(_lsaHandle, lsaKerberosString, &_authPkg) |> ignore
         (LsaAuthPackage _authPkg)
 
+    let callLsaAuthenticationPackage
+        (lsaHandle: LsaProcessHandle) 
+        (aPkg: LsaAuthPackage)
+        ticketInteraction
+        : KERB_QUERY_TKT_CACHE_RESPONSE =
+        // Returns a ticket struct, used in later logic to extract kerberos metadata    
+        let mutable ticketPtr = IntPtr.Zero
+        let mutable _tInteract = ticketInteraction
+        let mutable returnBufferLength = 0
+        let mutable protocolStatus = 0
 
+        let mutable (LsaProcessHandle _lsaHandle) = lsaHandle
+        let mutable (LsaAuthPackage _aPkg) = aPkg
+                
+        LsaCallAuthenticationPackage(_lsaHandle, 
+                                     _aPkg, 
+                                     &_tInteract, 
+                                     Marshal.SizeOf(_tInteract),
+                                     &ticketPtr,
+                                     &returnBufferLength,
+                                     &protocolStatus) 
+                                     |> ignore
 
+        let ticket = Marshal.PtrToStructure<KERB_QUERY_TKT_CACHE_RESPONSE>(ticketPtr)
+        ticket
