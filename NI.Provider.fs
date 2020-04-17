@@ -166,7 +166,6 @@
 
     [<Struct>]
     [<StructLayout(LayoutKind.Sequential)>]
-    //unverified. Up here because of ordering
     type LUID = 
         val mutable lower: uint32
         val mutable upper: int 
@@ -231,7 +230,6 @@
     
     [<Struct>]
     [<StructLayout(LayoutKind.Sequential)>]
-    //unverified
     type KERB_QUERY_TKT_CACHE_REQUEST =
         val mutable messageType : KERB_PROTOCOL_MESSAGE_TYPE
         val mutable logonID : LUID
@@ -261,6 +259,14 @@
     //Unverified
     type KERB_RETRIEVE_TKT_RESPONSE =
         val mutable ticket : KERB_EXTERNAL_TICKET
+
+    type KerberosRequest = 
+        |KERB_QUERY_TKT_CACHE_REQ of KERB_QUERY_TKT_CACHE_REQUEST
+        |KERB_RETRIEVE_TKT_REQ of KERB_RETRIEVE_TKT_REQUEST
+
+    type KerberosResponse = 
+        |KERB_QUERY_TKT_CACHE_RESP of KERB_QUERY_TKT_CACHE_RESPONSE
+        |KERB_RETRIEVE_TKT_RESP of KERB_RETRIEVE_TKT_RESPONSE
 
     [<Struct>]
     [<StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)>]
@@ -370,15 +376,25 @@
                                              LSA_STRING_IN packageName, 
                                              [<Out>] int& authenticationPackage)
 
-    [<DllImport("secur32.dll", SetLastError = true)>]
+    [<DllImport("secur32.dll", EntryPoint = "LsaCallAuthenticationPackage", SetLastError = true)>]
     //unverified
-    extern int LsaCallAuthenticationPackage(IntPtr lsaHandle, 
-                                           int authenticationPackage, 
-                                           KERB_QUERY_TKT_CACHE_REQUEST& protocolSubmitBuffer, 
-                                           int submitBufferLength, 
-                                           [<Out>] IntPtr& protocolReturnBuffer, 
-                                           [<Out>] int& returnBufferLength, 
-                                           [<Out>] int& protocolStatus)
+    extern int LsaCallAuthenticationPackage_CACHE(IntPtr lsaHandle, 
+                                                 int authenticationPackage, 
+                                                 KERB_QUERY_TKT_CACHE_REQUEST& protocolSubmitBuffer, 
+                                                 int submitBufferLength, 
+                                                 [<Out>] IntPtr& protocolReturnBuffer, 
+                                                 [<Out>] int& returnBufferLength, 
+                                                 [<Out>] int& protocolStatus)
+
+    [<DllImport("secur32.dll", EntryPoint = "LsaCallAuthenticationPackage", SetLastError = true)>]
+    //unverified
+    extern int LsaCallAuthenticationPackage_RET(IntPtr lsaHandle, 
+                                               int authenticationPackage, 
+                                               KERB_RETRIEVE_TKT_REQUEST& protocolSubmitBuffer, 
+                                               int submitBufferLength, 
+                                               [<Out>] IntPtr& protocolReturnBuffer, 
+                                               [<Out>] int& returnBufferLength, 
+                                               [<Out>] int& protocolStatus)
                                             
     [<DllImport("secur32.dll", SetLastError = true)>]
     //unverified
@@ -597,19 +613,18 @@
                           buffer = registeredProcessName)
 
         LsaRegisterLogonProcess(&configString, &lsaProcessHandle, &securityMode) |> ignore
-        (LsaProcessHandle lsaProcessHandle)
+        lsaProcessHandle |> LsaProcessHandle
 
-    let enumerateLsaLogonSessions () =
+    let enumerateLsaLogonSessions () : (uint64 * LUIDPtr) =
         // As it says on the tin.
         let mutable countOfLUIDs = 0UL
         let mutable luidPtr = IntPtr.Zero
 
         let ntstatus = LsaEnumerateLogonSessions(&countOfLUIDs, &luidPtr)
-        (countOfLUIDs, (LUIDPtr luidPtr))
+        (countOfLUIDs, luidPtr |> LUIDPtr)
 
     let getLsaSessionData 
-        (luidPtr: LUIDPtr) 
-        (count: uint64) 
+        (count: uint64, luidPtr: LUIDPtr)
         : SECURITY_LOGON_SESSION_DATA list =
         // Returns a filtered list of SECURITY_LOGON_SESSION_DATA structs. Seatbelt only processed
         // results with a pSID, so that's what we're doing. I don't know what the Some/None on this
@@ -620,13 +635,14 @@
         let sessionDataArray = Array.create (int(count)) (SECURITY_LOGON_SESSION_DATA())
 
         LsaGetLogonSessionData(_luidPtr, &sessionDataPtr) |> ignore
-        
         sessionDataArray
         |> Array.map(fun _sessionData -> let _sessionData = Marshal.PtrToStructure<SECURITY_LOGON_SESSION_DATA>(sessionDataPtr)
                                          sessionDataPtr <- IntPtr.Add(sessionDataPtr, Marshal.SizeOf<SECURITY_LOGON_SESSION_DATA>())
                                          _sessionData)
         |> Array.filter(fun _s -> not(_s.pSID = IntPtr.Zero)) // We only want results where there is a pSID
         |> Array.toList
+
+    let fetchLsaSessions = enumerateLsaLogonSessions >> getLsaSessionData
 
     let lookupLsaAuthenticationPackage 
         (lsaHandle: LsaProcessHandle) 
@@ -639,30 +655,46 @@
         let mutable _authPkg = 0
                 
         LsaLookupAuthenticationPackage(_lsaHandle, lsaKerberosString, &_authPkg) |> ignore
-        (LsaAuthPackage _authPkg)
+        _authPkg |> LsaAuthPackage
 
-    let callLsaAuthenticationPackage
+    let getKerberosTicketResponse
         (lsaHandle: LsaProcessHandle) 
         (aPkg: LsaAuthPackage)
-        ticketInteraction
-        : KERB_QUERY_TKT_CACHE_RESPONSE =
-        // Returns a ticket struct, used in later logic to extract kerberos metadata    
+        (kerbReq: KerberosRequest)
+        : KerberosResponse = 
+        // Returns a KERB response, depending on the type of KERB request
+        // passed in.
         let mutable ticketPtr = IntPtr.Zero
-        let mutable _tInteract = ticketInteraction
         let mutable returnBufferLength = 0
         let mutable protocolStatus = 0
-
+        // Unwrap types
         let mutable (LsaProcessHandle _lsaHandle) = lsaHandle
         let mutable (LsaAuthPackage _aPkg) = aPkg
-                
-        LsaCallAuthenticationPackage(_lsaHandle, 
-                                     _aPkg, 
-                                     &_tInteract, 
-                                     Marshal.SizeOf(_tInteract),
-                                     &ticketPtr,
-                                     &returnBufferLength,
-                                     &protocolStatus) 
-                                     |> ignore
+        
+        match kerbReq with
+        |KERB_QUERY_TKT_CACHE_REQ _Req -> let mutable _t = _Req
+                                          LsaCallAuthenticationPackage_CACHE(_lsaHandle, 
+                                                                             _aPkg, 
+                                                                             &_t, 
+                                                                             Marshal.SizeOf(_t),
+                                                                             &ticketPtr,
+                                                                             &returnBufferLength,
+                                                                             &protocolStatus) |> ignore
+                                          let kRes = Marshal.PtrToStructure<KERB_QUERY_TKT_CACHE_RESPONSE>(ticketPtr)
+                                          kRes |> KERB_QUERY_TKT_CACHE_RESP
+        |KERB_RETRIEVE_TKT_REQ _Req -> let mutable _t = _Req
+                                       LsaCallAuthenticationPackage_RET(_lsaHandle, 
+                                                                        _aPkg, 
+                                                                        &_t, 
+                                                                        Marshal.SizeOf(_t),
+                                                                        &ticketPtr,
+                                                                        &returnBufferLength,
+                                                                        &protocolStatus) |> ignore
+                                       let kRes = Marshal.PtrToStructure<KERB_RETRIEVE_TKT_RESPONSE>(ticketPtr)
+                                       kRes |> KERB_RETRIEVE_TKT_RESP
+                                        
 
-        let ticket = Marshal.PtrToStructure<KERB_QUERY_TKT_CACHE_RESPONSE>(ticketPtr)
-        ticket
+
+    let closeLsaHandle (handle: IntPtr) = 
+        LsaFreeReturnBuffer(handle)
+

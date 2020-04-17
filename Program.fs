@@ -1,5 +1,6 @@
 ﻿open System
 open System.Security.Principal
+open System.Runtime.InteropServices
 
 open Fetters.DomainTypes 
 open Fetters.NI.Providers
@@ -13,7 +14,7 @@ printfn "%s" <| getSystem()
 let lsaHandle = registerLsaLogonProcess ()
 revertToSelf () |> ignore
 let count, ptr = enumerateLsaLogonSessions () 
-let sessions = getLsaSessionData ptr count
+let sessions = getLsaSessionData (count, ptr) 
 let authpkg_ = sessions
                 |> List.map(fun _x -> _x.loginID.lower, _x.loginID.upper)
                 |> List.head
@@ -29,6 +30,10 @@ let kerbquery =
                                     logonID = _bogusLUID)
 
 let intauth = authpkg |> fun (LsaAuthPackage authpkg) -> authpkg
-let kerbresponse = callLsaAuthenticationPackage lsaHandle authpkg kerbquery
-printfn "%i::%i" intauth kerbresponse.countOfTickets
+let kerbresponse = getKerberosTicketResponse lsaHandle authpkg (kerbquery |> KERB_QUERY_TKT_CACHE_REQ)
+
+match kerbresponse with
+|KERB_QUERY_TKT_CACHE_RESP _res -> printfn "%A"_res.countOfTickets
+|KERB_RETRIEVE_TKT_RESP _res -> printfn "%A "_res.ticket 
+ 
 
