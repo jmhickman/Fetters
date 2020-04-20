@@ -88,28 +88,7 @@
         |KerbPurgeBindingCacheMessage = 29u
         |KerbQueryDomainExtendedPoliciesMessage = 30u
         |KerbQueryS4U2ProxyCacheMessage = 31u
-
-    [<Struct>]
-    [<Flags>]
-    //unverified
-    type KERB_TICKET_FLAGS =
-        |reserved = 2147483648u
-        |forwardable = 0x40000000u
-        |forwarded = 0x20000000u
-        |proxiable = 0x10000000u
-        |proxy = 0x08000000u
-        |may_postdate = 0x04000000u
-        |postdated = 0x02000000u
-        |invalid = 0x01000000u
-        |renewable = 0x00800000u
-        |initial = 0x00400000u
-        |pre_authent = 0x00200000u
-        |hw_authent = 0x00100000u
-        |ok_as_delegate = 0x00040000u
-        |name_canonicalize = 0x00010000u
-        |enc_pa_rep = 0x00010000u
-        |reserved1 = 0x00000001u
-
+ 
     [<Struct>]
     //unverified
     type SECURITY_LOGON_TYPE =
@@ -260,7 +239,7 @@
         |KERB_QUERY_TKT_CACHE_RESP of KERB_QUERY_TKT_CACHE_RESPONSE
         |KERB_RETRIEVE_TKT_RESP of KERB_RETRIEVE_TKT_RESPONSE
 
-    type KerberosTicket = 
+    type KerberosTicketStruct = 
         |KERB_EXTERNAL_TKT of KERB_EXTERNAL_TICKET
         |KERB_TKT_CACHE_INFO of KERB_TICKET_CACHE_INFO
 
@@ -669,7 +648,7 @@
         
         match kerbReq with
         |KERB_QUERY_TKT_CACHE_REQ _Req ->   let mutable _t = _Req
-                                            printfn "%i::%i::%A" _lsaHandle _aPkg _t
+                                            //printfn "%i::%i::%A" _lsaHandle _aPkg _t
                                             LsaCallAuthenticationPackage_CACHE(_lsaHandle, 
                                                                                _aPkg, 
                                                                                _t, 
@@ -677,10 +656,13 @@
                                                                                &ticketPtr,
                                                                                &returnBufferLength,
                                                                                protocolStatus) |> ignore
-                                            let kResponse = Marshal.PtrToStructure<KERB_QUERY_TKT_CACHE_RESPONSE>(ticketPtr) |> KERB_QUERY_TKT_CACHE_RESP
+                                            let kR = Marshal.PtrToStructure<KERB_QUERY_TKT_CACHE_RESPONSE>(ticketPtr)
+                                            //printfn "Ticket Count: %i" kR.countOfTickets 
+                                            //Get rid of intermediate symbol after debug is done
+                                            let kResponse = kR |> KERB_QUERY_TKT_CACHE_RESP
                                             (ticketPtr, kResponse)
         |KERB_RETRIEVE_TKT_REQ _Req ->      let mutable _t = _Req
-                                            printfn "%i" ticketPtr
+                                            //printfn "%i" ticketPtr
                                             LsaCallAuthenticationPackage_RET(_lsaHandle, 
                                                                              _aPkg, 
                                                                              _t, 
@@ -688,13 +670,13 @@
                                                                              &ticketPtr,
                                                                              &returnBufferLength,
                                                                              protocolStatus) |> ignore
-                                            printfn "%i::%i" ticketPtr returnBufferLength
+                                            //printfn "%i::%i" ticketPtr returnBufferLength
                                             let kResponse = Marshal.PtrToStructure<KERB_RETRIEVE_TKT_RESPONSE>(ticketPtr) |> KERB_RETRIEVE_TKT_RESP
                                             (ticketPtr, kResponse)
                                         
     let extractKerberosReponseTickets
         (ticketPtr: IntPtr, kResponse: KerberosResponse)
-        : KerberosTicket list =
+        : KerberosTicketStruct list =
         // Takes in either type of response struct, and outputs a list we can work with
         let tktptr, kResp = ticketPtr, kResponse
         match kResp with
@@ -703,6 +685,64 @@
                                                                       |> KERB_TKT_CACHE_INFO)
         |KERB_RETRIEVE_TKT_RESP ticket ->       [Marshal.PtrToStructure<KERB_EXTERNAL_TICKET>(tktptr) |> KERB_EXTERNAL_TKT]
 
+    let createKerberosQueryTicket
+        (ticket: KERB_TICKET_CACHE_INFO)
+        : KerberosQueryTicket =
+        let flags = Microsoft.FSharp.Core.LanguagePrimitives.EnumOfValue<uint32, Fetters.DomainTypes.KERB_TICKET_FLAGS>(ticket.ticketFlags)
+        let kerbTicket = {serverName = Marshal.PtrToStringAuto(ticket.serverName.buffer)
+                          realm = Marshal.PtrToStringAuto(ticket.realmName.buffer)
+                          startTime = DateTime.FromFileTime(ticket.startTime)
+                          endTime = DateTime.FromFileTime(ticket.endTime)
+                          renewTime = DateTime.FromFileTime(ticket.renewTime)
+                          encryptionType = KERB_ENCRYPTION_TYPE.GetName(typeof<KERB_ENCRYPTION_TYPE>, ticket.encryptionType)
+                          ticketFlags = flags }
+        kerbTicket
+
+    let createKerberosRetrieveTicket
+        (ticket: KERB_EXTERNAL_TICKET)
+        : KerberosRetrieveTicket =
+
+        let flags = Microsoft.FSharp.Core.LanguagePrimitives.EnumOfValue<uint32, KERB_TICKET_FLAGS>(ticket.Flags)
+        let rawSessionKey = Array.create (ticket.SessionKey.length) 0uy
+        Marshal.Copy(ticket.SessionKey.value, rawSessionKey, 0, ticket.SessionKey.length)
+        let b64SessionKey = Convert.ToBase64String(rawSessionKey)
+
+        let rawEncodedTicket = Array.create (ticket.EncodedTicketSize) 0uy
+        Marshal.Copy(ticket.EncodedTicket, rawEncodedTicket, 0, ticket.EncodedTicketSize)
+        let b64Ticket = Convert.ToBase64String(rawEncodedTicket)
+
+        let kerbTicket = {serviceName = Marshal.PtrToStringAuto(ticket.ServiceName)
+                          target = Marshal.PtrToStringAuto(ticket.TargetName)
+                          client = Marshal.PtrToStringAuto(ticket.ClientName)
+                          domain = Marshal.PtrToStringAuto(ticket.DomainName.buffer)
+                          targetDomain = Marshal.PtrToStringAuto(ticket.TargetDomainName.buffer)
+                          altTargetDomain = Marshal.PtrToStringAuto(ticket.AltTargetDomainName.buffer)
+                          sessionKeyType = KERB_ENCRYPTION_TYPE.GetName(typeof<KERB_ENCRYPTION_TYPE>, ticket.SessionKey.keyType)
+                          base64SessionKey = b64SessionKey
+                          keyExpiry = DateTime.FromFileTime(ticket.KeyExpirationTime)
+                          flags = flags
+                          startTime = DateTime.FromFileTime(ticket.KeyExpirationTime)
+                          endTime = DateTime.FromFileTime(ticket.EndTime)
+                          renewTime = DateTime.FromFileTime(ticket.RenewUntil)
+                          skewTime = DateTime.FromFileTime(ticket.TimeSkew)
+                          encodedSize = ticket.EncodedTicketSize
+                          base64EncodedTicket = b64Ticket}
+        kerbTicket
+        
+    
+//    let createKerberosRecordList
+//        (ticketList: KerberosTicketStruct list)
+//        : KerberosTicket list =
+//
+//        ticketList 
+//        |> List.map(fun ticket ->   match ticket with
+//                                    |KERB_EXTERNAL_TKT tkt -> tkt
+//                                    |KERB_TKT_CACHE_INFO tkt -> createKerberosQueryTicket tkt)
+    
+    
+    
     let closeLsaHandle (handle: IntPtr) = 
         LsaFreeReturnBuffer(handle)
+
+
 

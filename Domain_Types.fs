@@ -204,6 +204,24 @@ module Fetters.DomainTypes
     // System dynamic Attributes
     ////////////////////////////
 
+    type KERB_TICKET_FLAGS =
+        |reserved = 2147483648u
+        |forwardable = 0x40000000u
+        |forwarded = 0x20000000u
+        |proxiable = 0x10000000u
+        |proxy = 0x08000000u
+        |may_postdate = 0x04000000u
+        |postdated = 0x02000000u
+        |invalid = 0x01000000u
+        |renewable = 0x00800000u
+        |initial = 0x00400000u
+        |pre_authent = 0x00200000u
+        |hw_authent = 0x00100000u
+        |ok_as_delegate = 0x00040000u
+        |name_canonicalize = 0x00010000u
+        |enc_pa_rep = 0x00010000u
+        |reserved1 = 0x00000001u
+
     type KerberosRetrieveTicket = {
         serviceName : string
         target : string
@@ -213,26 +231,31 @@ module Fetters.DomainTypes
         altTargetDomain : string
         sessionKeyType : string
         base64SessionKey : string
-        keyExpiry : string
-        flags : string //probably wrong
-        startTime : uint64
-        endTime : uint64
-        renewTime : uint64
-        skewTime : uint64
-        encodedSize : uint32
+        keyExpiry : DateTime
+        flags : KERB_TICKET_FLAGS
+        startTime : DateTime
+        endTime : DateTime
+        renewTime : DateTime
+        skewTime : DateTime
+        encodedSize : int32
         base64EncodedTicket : string
         }
 
     type KerberosQueryTicket = {
         serverName : string
         realm : string
-        startTime : uint64
-        endTime : uint64
-        renewTime : uint64
+        startTime : DateTime
+        endTime : DateTime
+        renewTime : DateTime
         encryptionType : string
-        ticketContents : KerberosRetrieveTicket
+        ticketFlags: KERB_TICKET_FLAGS
         }
 
+    
+    type KerberosTicket =
+        |KerberosRetrieveTicket
+        |KerberosQueryTicket
+    
     type DomainSession = {
         domain : string
         logonID : uint32
@@ -243,7 +266,7 @@ module Fetters.DomainTypes
         logonServer : string
         logonServerDnsDomain : string
         userPrincipalName : string
-        kerberosTickets : KerberosQueryTicket list}
+        kerberosTickets : KerberosTicket list}
 
     type Event = {
         eventId : uint32 
