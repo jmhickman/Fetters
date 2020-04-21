@@ -253,20 +253,22 @@ module Fetters.DomainTypes
 
     
     type KerberosTicket =
-        |KerberosRetrieveTicket
-        |KerberosQueryTicket
+        |KerberosRetrieveTicket of KerberosRetrieveTicket
+        |KerberosQueryTicket of KerberosQueryTicket
     
     type DomainSession = {
+        username : string
         domain : string
         logonID : uint32
         userSID : string // probably wrong
         authenticationPkg : string
         logonType : string
-        logonTime : uint32
+        loginTime : DateTime
         logonServer : string
         logonServerDnsDomain : string
         userPrincipalName : string
-        kerberosTickets : KerberosTicket list}
+        kerberosCachedTickets : KerberosTicket list
+        kerberosTGTcontents : KerberosTicket list}
 
     type Event = {
         eventId : uint32 
