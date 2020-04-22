@@ -15,4 +15,7 @@ printfn "Number of LSA Sessions detected: %i" <| results.Length
 revertToSelf () |> ignore
 
 results
-|> List.iter(fun result -> printfn "%s:::%i:::%i" result.username result.kerberosCachedTickets.Length result.kerberosTGTcontents.Length)
+|> List.map(fun result -> result.kerberosTGTcontents
+                          |> List.iter(fun x -> match x with
+                                                |KerberosRetrieveTicket xx -> printfn "%20s" xx.base64EncodedTicket
+                                                |KerberosQueryTicket xx -> printfn ""))|>ignore

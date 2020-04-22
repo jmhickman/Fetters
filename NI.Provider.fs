@@ -87,7 +87,7 @@
         |KerbPurgeBindingCacheMessage = 29u
         |KerbQueryDomainExtendedPoliciesMessage = 30u
         |KerbQueryS4U2ProxyCacheMessage = 31u
- 
+    
     [<Struct>]
     //unverified
     type SECURITY_LOGON_TYPE =
@@ -230,17 +230,7 @@
     type KERB_RETRIEVE_TKT_RESPONSE =
         val mutable ticket : KERB_EXTERNAL_TICKET
 
-    type KerberosRequest = 
-        |KERB_QUERY_TKT_CACHE_REQ of KERB_QUERY_TKT_CACHE_REQUEST
-        |KERB_RETRIEVE_TKT_REQ of KERB_RETRIEVE_TKT_REQUEST
-
-    type KerberosResponse = 
-        |KERB_QUERY_TKT_CACHE_RESP of KERB_QUERY_TKT_CACHE_RESPONSE
-        |KERB_RETRIEVE_TKT_RESP of KERB_RETRIEVE_TKT_RESPONSE
-
-    type KerberosTicketStruct = 
-        |KERB_EXTERNAL_TKT of KERB_EXTERNAL_TICKET
-        |KERB_TKT_CACHE_INFO of KERB_TICKET_CACHE_INFO
+    
 
     [<Struct>]
     [<StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)>]
@@ -283,8 +273,20 @@
         val mutable addressFamily : uint32
         [<MarshalAs(UnmanagedType.ByValArray, SizeConst = 20)>]
         val mutable addressRaw : byte[]
+    
+    type KerberosRequest = 
+        |KERB_QUERY_TKT_CACHE_REQ of KERB_QUERY_TKT_CACHE_REQUEST
+        |KERB_RETRIEVE_TKT_REQ of KERB_RETRIEVE_TKT_REQUEST
 
+    type KerberosResponse = 
+        |KERB_QUERY_TKT_CACHE_RESP of KERB_QUERY_TKT_CACHE_RESPONSE
+        |KERB_RETRIEVE_TKT_RESP of KERB_RETRIEVE_TKT_RESPONSE
 
+    type KerberosTicketStruct = 
+        |KERB_EXTERNAL_TKT of KERB_EXTERNAL_TICKET
+        |KERB_TKT_CACHE_INFO of KERB_TICKET_CACHE_INFO
+
+    
     //////////////////////
     // Import Declarations
     //////////////////////
@@ -412,21 +414,25 @@
     // RDP Session Enumeration Calls
     ////////////////////////////////
     
-    let private populateRdpSessionStructs ppSessionBaseAddr count =
+    let private populateRdpSessionStructs 
+        (ppSessionBaseAddr: IntPtr)
+        (count: int) 
+        : WTS_SESSION_INFO_1[] =
         // Helper function to pull unmanaged info into managed code 
-        let mutable _ppSBA = ppSessionBaseAddr
-        let enumSessions = Array.create count (WTS_SESSION_INFO_1())
-        enumSessions 
-        |> Array.map(fun _s -> let _s = Marshal.PtrToStructure<WTS_SESSION_INFO_1>(_ppSBA)
-                               _ppSBA <- IntPtr.Add(_ppSBA, Marshal.SizeOf<WTS_SESSION_INFO_1>())
-                               _s)
+        let mutable ppSBA = ppSessionBaseAddr
+        //let enumSessions = Array.create count (WTS_SESSION_INFO_1())
+        [|0..(count - 1)|] 
+        |> Array.map(fun c -> let wtsSessionInfo = Marshal.PtrToStructure<WTS_SESSION_INFO_1>(ppSBA)
+                              ppSBA <- IntPtr.Add(ppSBA, Marshal.SizeOf<WTS_SESSION_INFO_1>())
+                              wtsSessionInfo)
 
-
-    let private rdpSessionGetAddress ppBuffer = 
+    let private rdpSessionGetAddress 
+        (ppBuffer: IntPtr) 
+        : System.Net.IPAddress = 
         // Helper function for extracting IP address strings from the 
         // WTS_CLIENT_ADDRESS struct
-        let _a = Marshal.PtrToStructure<WTS_CLIENT_ADDRESS>(ppBuffer)
-        System.Net.IPAddress(_a.addressRaw.[2..5])
+        let addr = Marshal.PtrToStructure<WTS_CLIENT_ADDRESS>(ppBuffer)
+        System.Net.IPAddress(addr.addressRaw.[2..5])
         
     let private rdpSessionReverseLookup sessionID =
         // Helper function to do a reverse IP lookup on a given Session ID
@@ -476,8 +482,6 @@
         match enumList with
         | x when x.Length > 0 -> Some enumList
         | _ -> None
-        
-
 
     ////////////////////////////////
     // Local Group Enumeration Calls
@@ -489,13 +493,13 @@
         // Helper function for populating the LOCAL_GROUP_MEMBER structs
         // I feel like this should actualy use mutability, because it's not necessarily
         // clear that the `memberStructs` thta gets passed back is a copy?
-        let memberStructs = Array.create entriesRead (LOCAL_GROUP_MEMBER_INFO2())
-        let mutable _b = bufferPtr
+        let mutable bPtr = bufferPtr
         
-        memberStructs 
-        |> Array.map(fun _m -> let _m = Marshal.PtrToStructure<LOCAL_GROUP_MEMBER_INFO2>(_b)
-                               _b <- IntPtr.Add(_b, Marshal.SizeOf<LOCAL_GROUP_MEMBER_INFO2>())
-                               _m)
+        [|0..(entriesRead - 1)|] 
+        |> Array.map(fun c -> 
+                     let mstruct = Marshal.PtrToStructure<LOCAL_GROUP_MEMBER_INFO2>(bPtr)
+                     bPtr <- IntPtr.Add(bPtr, Marshal.SizeOf<LOCAL_GROUP_MEMBER_INFO2>())
+                     mstruct)
         
 
     let getLocalGroupMembership (groupName: string) =
@@ -519,8 +523,8 @@
         
         let groupMemberList = 
             members
-            |> Array.filter(fun _f -> not (_f.lgrmi2_sid = IntPtr.Zero))
-            |> Array.map(fun _m -> _m.lgrmi2_domainandname) 
+            |> Array.filter(fun gmember -> not (gmember.lgrmi2_sid = IntPtr.Zero))
+            |> Array.map(fun gmember -> gmember.lgrmi2_domainandname) 
             |> Array.toList 
         // None means there was an error in the NLGGM call, or the group doesn't exist. 
         match groupMemberList with
@@ -555,8 +559,8 @@
         
     let revertToSelf () = 
         match RevertToSelf() with
-        | true -> true
-        | false -> false
+        |true -> true
+        |false -> false
 
     let getSystem () = 
         // Impersonate the NTAUTHORITY\SYSTEM user for the purposes of high integrity actions.
@@ -584,7 +588,7 @@
 
     let deregisterLsaLogonProcess (lsaHandle: LsaProcessHandle) =
         let mutable (LsaProcessHandle lHandle) = lsaHandle
-        printfn "Exitcode %i" <| LsaDeregisterLogonProcess(lHandle)
+        LsaDeregisterLogonProcess(lHandle) |> ignore
 
     let untrustedLsaConnection () : LsaProcessHandle =
         let mutable lsaHandle = IntPtr.Zero
@@ -592,11 +596,11 @@
         lsaHandle |> LsaProcessHandle
 
     let closeLsaHandle (handle: LsaProcessHandle) = 
-        let (LsaProcessHandle _handle) = handle
-        LsaFreeReturnBuffer(_handle)
+        let mutable (LsaProcessHandle _handle) = handle
+        LsaFreeReturnBuffer(_handle) |> ignore
 
     let enumerateLsaLogonSessions () : (uint64 * LUIDPtr) =
-        // As it says on the tin.
+        // Doesn't use the LsaProcessHandle, but requires SYSTEM token or equal privs
         let mutable countOfLUIDs = 0UL
         let mutable luidPtr = IntPtr.Zero
 
@@ -613,11 +617,13 @@
         let mutable (LUIDPtr _luidPtr) = luidPtr
 
         [|0..int(count)- 1|]
-        |> Array.map(fun x ->  LsaGetLogonSessionData(_luidPtr, &sessionDataPtr) |> ignore
-                               let sessionData = Marshal.PtrToStructure<SECURITY_LOGON_SESSION_DATA>(sessionDataPtr)
-                               sessionDataPtr <- IntPtr.Add(sessionDataPtr, Marshal.SizeOf<SECURITY_LOGON_SESSION_DATA>())
-                               _luidPtr <- IntPtr.Add(_luidPtr, Marshal.SizeOf<LUID>())
-                               sessionData)
+        |> Array.map(fun x -> 
+                     LsaGetLogonSessionData(_luidPtr, &sessionDataPtr) |> ignore
+                     let sessionData = Marshal.PtrToStructure<SECURITY_LOGON_SESSION_DATA>(sessionDataPtr)
+                     sessionDataPtr <- IntPtr.Add(sessionDataPtr, Marshal.SizeOf<SECURITY_LOGON_SESSION_DATA>())
+                     _luidPtr <- IntPtr.Add(_luidPtr, Marshal.SizeOf<LUID>())
+                     closeLsaHandle (sessionDataPtr |> LsaProcessHandle)
+                     sessionData)
         |> Array.filter(fun _s -> not(_s.pSID = IntPtr.Zero)) // We only want results where there is a pSID
         |> Array.toList
 
@@ -630,11 +636,11 @@
         // This call is around to generate authpkgs for the later call to LsaCallAuthenticationPackage
         // which is where the magic happens, I suppose. Leveraging types again to help keep the 
         // handles and pointer types straight.
-        let mutable (LsaProcessHandle _lsaHandle) = lsaHandle
-        let mutable _authPkg = 0
+        let mutable (LsaProcessHandle lsaHandle) = lsaHandle
+        let mutable authPkg = 0
                 
-        LsaLookupAuthenticationPackage(_lsaHandle, lsaKerberosString, &_authPkg) |> ignore
-        _authPkg |> LsaAuthPackage
+        LsaLookupAuthenticationPackage(lsaHandle, lsaKerberosString, &authPkg) |> ignore
+        authPkg |> LsaAuthPackage
 
     let getKerberosTicketResponse
         (lsaHandle: LsaProcessHandle) 
@@ -651,47 +657,47 @@
         let mutable (LsaAuthPackage _aPkg) = aPkg
         
         match kerbReq with
-        |KERB_QUERY_TKT_CACHE_REQ req -> let mutable _req = req
-                                         LsaCallAuthenticationPackage_CACHE(_lsaHandle, 
-                                                                            _aPkg, 
-                                                                            _req, 
-                                                                            Marshal.SizeOf(_req),
-                                                                            &ticketPtr,
-                                                                            &returnBufferLength,
-                                                                            protocolStatus) |> ignore
-                                         match returnBufferLength with
-                                         |x when x > 0 -> let kR = Marshal.PtrToStructure<KERB_QUERY_TKT_CACHE_RESPONSE>(ticketPtr)
-                                                          match kR.countOfTickets with
-                                                          | x when x > 0 -> Some (ticketPtr, kR 
-                                                                            |> KERB_QUERY_TKT_CACHE_RESP)
-                                                          | _ -> None
-                                         | _ -> None
-        |KERB_RETRIEVE_TKT_REQ req -> let mutable _req = req
-                                      LsaCallAuthenticationPackage_RET(_lsaHandle, 
-                                                                       _aPkg, 
-                                                                       _req, 
-                                                                       Marshal.SizeOf(_req),
-                                                                       &ticketPtr,
-                                                                       &returnBufferLength,
-                                                                       protocolStatus) |> ignore
-                                      match returnBufferLength with
-                                      | x when x > 0 -> Some (ticketPtr, 
-                                                              Marshal.PtrToStructure<KERB_RETRIEVE_TKT_RESPONSE>(ticketPtr) 
-                                                        |> KERB_RETRIEVE_TKT_RESP)
-                                      | _ -> None
+        |KERB_QUERY_TKT_CACHE_REQ req -> 
+            let mutable _req = req
+            LsaCallAuthenticationPackage_CACHE(_lsaHandle, 
+                                               _aPkg, 
+                                               _req, 
+                                               Marshal.SizeOf(_req),
+                                               &ticketPtr,
+                                               &returnBufferLength,
+                                               protocolStatus) |> ignore
+            match returnBufferLength with
+            |x when x > 0 -> let kR = Marshal.PtrToStructure<KERB_QUERY_TKT_CACHE_RESPONSE>(ticketPtr)
+                             match kR.countOfTickets with
+                             | x when x > 0 -> Some (ticketPtr, kR |> KERB_QUERY_TKT_CACHE_RESP)
+                             | _ -> None
+            | _ -> None
+        |KERB_RETRIEVE_TKT_REQ req -> 
+            let mutable _req = req
+            LsaCallAuthenticationPackage_RET(_lsaHandle, 
+                                             _aPkg, 
+                                             _req, 
+                                             Marshal.SizeOf(_req),
+                                             &ticketPtr,
+                                             &returnBufferLength,
+                                             protocolStatus) |> ignore
+            match returnBufferLength with
+            | x when x > 0 -> Some (ticketPtr, Marshal.PtrToStructure<KERB_RETRIEVE_TKT_RESPONSE>(ticketPtr) 
+                              |> KERB_RETRIEVE_TKT_RESP)
+            | _ -> None
                                         
     let extractKerberosReponseTickets
         (ticketPtr: IntPtr, kResponse: KerberosResponse)
         : KerberosTicketStruct list =
         // Takes in either type of response struct, and outputs a list we can work with
-        let tktptr, kResp = ticketPtr, kResponse
-        
-        match kResp with
-        |KERB_QUERY_TKT_CACHE_RESP ticket -> [0..(ticket.countOfTickets - 1)] 
-                                             |> List.map(fun count -> Marshal.PtrToStructure<KERB_TICKET_CACHE_INFO>(IntPtr.Add(tktptr, (8+ (count * 64)))) 
-                                                                   |> KERB_TKT_CACHE_INFO)
-        //Only one TGT per session, so no count of tickets to iterate
-        |KERB_RETRIEVE_TKT_RESP ticket -> [Marshal.PtrToStructure<KERB_EXTERNAL_TICKET>(tktptr) |> KERB_EXTERNAL_TKT] 
+        match kResponse with
+        |KERB_QUERY_TKT_CACHE_RESP ticket -> 
+            [0..(ticket.countOfTickets - 1)] 
+            |> List.map(fun count -> 
+                        Marshal.PtrToStructure<KERB_TICKET_CACHE_INFO>(IntPtr.Add(ticketPtr, (8+ (count * 64)))) 
+                        |> KERB_TKT_CACHE_INFO)
+        |KERB_RETRIEVE_TKT_RESP x -> 
+                        [Marshal.PtrToStructure<KERB_EXTERNAL_TICKET>(ticketPtr) |> KERB_EXTERNAL_TKT] 
 
     let createKerberosQueryTicket
         (ticket: KERB_TICKET_CACHE_INFO)
@@ -703,7 +709,7 @@
                           endTime = DateTime.FromFileTime(ticket.endTime)
                           renewTime = DateTime.FromFileTime(ticket.renewTime)
                           encryptionType = KERB_ENCRYPTION_TYPE.GetName(typeof<KERB_ENCRYPTION_TYPE>, ticket.encryptionType)
-                          ticketFlags = flags }
+                          ticketFlags = flags}
         kerbTicket
 
     let createKerberosRetrieveTicket
@@ -761,17 +767,24 @@
         : KerberosTicket list =
         // Returns a list of Ticket records.
         ticketList 
-        |> List.map(fun ticket ->   match ticket with
-                                    |KERB_EXTERNAL_TKT tkt -> createKerberosRetrieveTicket tkt |> KerberosRetrieveTicket
-                                    |KERB_TKT_CACHE_INFO tkt -> createKerberosQueryTicket tkt |> KerberosQueryTicket)
+        |> List.map(fun ticket ->   
+                    match ticket with
+                    |KERB_EXTERNAL_TKT tkt -> 
+                        createKerberosRetrieveTicket tkt |> KerberosRetrieveTicket
+                    |KERB_TKT_CACHE_INFO tkt -> 
+                        createKerberosQueryTicket tkt |> KerberosQueryTicket)
 
     let enumerateDomainSessions ()
         : DomainSession list =
         // Emits a DomainSession for each enumerated session, containing KerberosTickets as well
         // as other metadata.
-        let LSAStringQuery = LSA_STRING_IN( length = uint16("kerberos".Length), 
-                                            maxLength = uint16("kerberos".Length + 1), 
-                                            buffer = "kerberos")
+        let LSAStringQuery = 
+            LSA_STRING_IN(length = uint16("kerberos".Length), 
+                          maxLength = uint16("kerberos".Length + 1), 
+                          buffer = "kerberos")
+        
+        // Handle error cases. How best to do it...?
+        
         let tTuple = 
             match getCurrentRole WindowsBuiltInRole.Administrator with
             |true -> getSystem() |> ignore
@@ -792,43 +805,48 @@
             match tTuple with
             |w, x, y, z -> w, x, y, z
         
-        //let lsaHandle = registerLsaLogonProcess ()
-        //let lsaAuthPackage = lookupLsaAuthenticationPackage lsaHandle LSAStringQuery
-        //let sessionList = fetchLsaSessions ()
-        //let luidList = 
-        //    sessionList
-        //    |> List.map(fun session -> session.loginID.lower, session.loginID.upper)
-        // With our sessions and LUIDs ready, create the queries to LSA, and process the tickets
-        // and session into our eventual DomainSession record. The third case in the third
-        // map is a dummy case to make the compiler happy. No stand-alone TGTs.
         let domainSessionRecord =
             (sessionList, luidList)
-            ||> List.map2(fun sess luid -> let _luid = LUID(lower= fst luid, upper = snd luid)
-                                           (sess, 
-                                            KERB_QUERY_TKT_CACHE_REQUEST(messageType = KERB_PROTOCOL_MESSAGE_TYPE.KerbQueryTicketCacheMessage,
-                                                                         logonID = _luid ) |> KERB_QUERY_TKT_CACHE_REQ,
-                                            KERB_RETRIEVE_TKT_REQUEST(messageType = KERB_PROTOCOL_MESSAGE_TYPE.KerbRetrieveTicketMessage,
-                                                                      logonID = _luid) |> KERB_RETRIEVE_TKT_REQ))
-            |> List.map(fun sessiontuple -> match sessiontuple with
-                                            |sess, kCReq,kRReq -> let kCacheResp = getKerberosTicketResponse lsaHandle lsaAuthPackage kCReq
-                                                                  let kRetResp = getKerberosTicketResponse lsaHandle lsaAuthPackage kRReq
-                                                                  (sess, kCacheResp,kRetResp))
-            |>List.map(fun sessiontuple ->  match sessiontuple with
-                                            |sess, Some kCReq, Some kRetReq -> let KQTickStruct = extractKerberosReponseTickets kCReq
-                                                                               let KRTickStruct = extractKerberosReponseTickets kRetReq
-                                                                               (sess,KQTickStruct,KRTickStruct)
-                                            |sess, Some kCReq, None -> let KQTickStruct = extractKerberosReponseTickets kCReq
-                                                                       (sess,KQTickStruct,[])
-                                            |sess, None, Some toss -> (sess, [], [])
-                                            |sess, None, None -> (sess, [], []))
-            |>List.map(fun sessiontuple ->  match sessiontuple with
-                                            |_, kQTickStruct, kExtStruct -> let kQRecords = createKerberosRecordList kQTickStruct
-                                                                            let kRRecords = createKerberosRecordList kExtStruct
-                                                                            match sessiontuple with
-                                                                            |sess, _, _ -> (sess,kQRecords,kRRecords))
+            ||>List.map2(fun sess luid -> 
+                          let _luid = LUID(lower= fst luid, upper = snd luid)
+                          (sess, 
+                           KERB_QUERY_TKT_CACHE_REQUEST
+                            (messageType = KERB_PROTOCOL_MESSAGE_TYPE.KerbQueryTicketCacheMessage,
+                             logonID = _luid ) |> KERB_QUERY_TKT_CACHE_REQ,
+                           KERB_RETRIEVE_TKT_REQUEST
+                            (messageType = KERB_PROTOCOL_MESSAGE_TYPE.KerbRetrieveTicketMessage,
+                             logonID = _luid) |> KERB_RETRIEVE_TKT_REQ) )
+
+            |>List.map(fun sessiontuple -> 
+                        match sessiontuple with
+                        |sess, kCReq,kRReq -> 
+                            let kCacheResp = getKerberosTicketResponse lsaHandle lsaAuthPackage kCReq
+                            let kRetResp = getKerberosTicketResponse lsaHandle lsaAuthPackage kRReq
+                            (sess, kCacheResp, kRetResp))
+
+            |>List.map(fun sessiontuple -> 
+                       match sessiontuple with
+                       |sess, Some kCReq, Some kRetReq -> 
+                            let KQTickStruct = extractKerberosReponseTickets kCReq
+                            let KRTickStruct = extractKerberosReponseTickets kRetReq
+                            (sess,KQTickStruct,KRTickStruct)
+                       |sess, Some kCReq, None -> 
+                            let KQTickStruct = extractKerberosReponseTickets kCReq
+                            (sess,KQTickStruct,[])
+                       |sess, None, Some toss -> (sess, [], [])
+                       |sess, None, None -> (sess, [], []))
+
+            |>List.map(fun sessiontuple ->  
+                       match sessiontuple with
+                       |sess, kQTickStruct, kExtStruct -> 
+                            let kQRecords = createKerberosRecordList kQTickStruct
+                            let kRRecords = createKerberosRecordList kExtStruct
+                            (sess,kQRecords,kRRecords))
+            
             |>List.map(fun sessiontuple -> createDomainSessionRecord sessiontuple)
+        //Cleanup and then pass out result
         deregisterLsaLogonProcess lsaHandle
-        closeLsaHandle lsaHandle |> ignore
+        closeLsaHandle lsaHandle
         domainSessionRecord
         
                                                                         
