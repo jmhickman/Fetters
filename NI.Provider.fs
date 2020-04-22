@@ -586,6 +586,11 @@
         let mutable (LsaProcessHandle lHandle) = lsaHandle
         printfn "Exitcode %i" <| LsaDeregisterLogonProcess(lHandle)
 
+    let untrustedLsaConnection () : LsaProcessHandle =
+        let mutable lsaHandle = IntPtr.Zero
+        LsaConnectUntrusted(&lsaHandle) |> ignore
+        lsaHandle |> LsaProcessHandle
+
     let closeLsaHandle (handle: LsaProcessHandle) = 
         let (LsaProcessHandle _handle) = handle
         LsaFreeReturnBuffer(_handle)
@@ -767,13 +772,32 @@
         let LSAStringQuery = LSA_STRING_IN( length = uint16("kerberos".Length), 
                                             maxLength = uint16("kerberos".Length + 1), 
                                             buffer = "kerberos")
-
-        let lsaHandle = registerLsaLogonProcess ()
-        let lsaAuthPackage = lookupLsaAuthenticationPackage lsaHandle LSAStringQuery
-        let sessionList = fetchLsaSessions ()
-        let luidList = 
-            sessionList
-            |> List.map(fun session -> session.loginID.lower, session.loginID.upper)
+        let tTuple = 
+            match getCurrentRole WindowsBuiltInRole.Administrator with
+            |true -> getSystem() |> ignore
+                     let lsaHandle = registerLsaLogonProcess ()
+                     let lsaAuthPackage = lookupLsaAuthenticationPackage lsaHandle LSAStringQuery
+                     let sessionList = fetchLsaSessions ()
+                     let luidList = 
+                         sessionList
+                         |> List.map(fun session -> session.loginID.lower, session.loginID.upper)
+                     sessionList, luidList, lsaAuthPackage, lsaHandle
+            |false -> let lsaHandle = untrustedLsaConnection ()
+                      let lsaAuthPackage = lookupLsaAuthenticationPackage lsaHandle LSAStringQuery
+                      let sessionList = [SECURITY_LOGON_SESSION_DATA()]
+                      let luidList = [0u,0]
+                      sessionList, luidList, lsaAuthPackage, lsaHandle
+        
+        let sessionList, luidList, lsaAuthPackage, lsaHandle =
+            match tTuple with
+            |w, x, y, z -> w, x, y, z
+        
+        //let lsaHandle = registerLsaLogonProcess ()
+        //let lsaAuthPackage = lookupLsaAuthenticationPackage lsaHandle LSAStringQuery
+        //let sessionList = fetchLsaSessions ()
+        //let luidList = 
+        //    sessionList
+        //    |> List.map(fun session -> session.loginID.lower, session.loginID.upper)
         // With our sessions and LUIDs ready, create the queries to LSA, and process the tickets
         // and session into our eventual DomainSession record. The third case in the third
         // map is a dummy case to make the compiler happy. No stand-alone TGTs.
