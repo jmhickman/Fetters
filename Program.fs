@@ -1,6 +1,5 @@
 ﻿open System
-open System.Security.Principal
-open System.Runtime.InteropServices
+//open System.Security.Principal
 
 open Fetters.DomainTypes 
 open Fetters.NI.Providers
@@ -9,7 +8,6 @@ open Fetters.dotNetFunctions
 
 
 // Testing/rework harness
-printfn "%s" <| getSystem()
 let results = enumerateDomainSessions ()
 printfn "Number of LSA Sessions detected: %i" <| results.Length
 revertToSelf () |> ignore

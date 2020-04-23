@@ -814,7 +814,7 @@
         
         let tTuple = 
             match getCurrentRole WindowsBuiltInRole.Administrator with
-            |true -> getSystem() |> ignore
+            |true -> printfn "%s" <| getSystem()
                      let lsaHandle = registerLsaLogonProcess ()
                      let lsaAuthPackage = lookupLsaAuthenticationPackage lsaHandle LSAStringQuery
                      let sessionList = fetchLsaSessions ()
@@ -822,6 +822,7 @@
                          sessionList
                          |> List.map(fun session -> session.loginID.lower, session.loginID.upper)
                      sessionList, luidList, lsaAuthPackage, lsaHandle
+
             |false -> let lsaHandle = untrustedLsaConnection ()
                       let lsaAuthPackage = lookupLsaAuthenticationPackage lsaHandle LSAStringQuery
                       let sessionList = [SECURITY_LOGON_SESSION_DATA()]
