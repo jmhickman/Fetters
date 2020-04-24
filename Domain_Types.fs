@@ -108,7 +108,15 @@ module Fetters.DomainTypes
 
     type File = 
         | Interesting_File
-        | Recent_File 
+        | Recent_File
+
+    type VaultRecord = {
+        resource : string
+        identity : string
+        packageSid : string
+        credential : string
+        lastModified : DateTime
+        }
 
     type SystemSecrets = {
         creds : Credential list
@@ -353,12 +361,19 @@ module Fetters.DomainTypes
     // Native Call Types
     ////////////////////
 
-    // the handles for the Kerberos enum are difficult to track because of the enormous
-    // code structure differences between Seatbelt and Fetters. To help keep the handles
-    // and pointers and such straight, I'm going to make them Types.
+    //The handles and pointers for the Kerberos enumeration are difficult to track 
+    //because of the enormous code structure differences between Seatbelt and Fetters. 
+    //To help keep the handles and pointers straight, make them Types.
 
     type LsaProcessHandle = LsaProcessHandle of IntPtr
 
     type LsaAuthPackage = LsaAuthPackage of int
 
     type LUIDPtr = LUIDPtr of IntPtr
+
+    type VaultPtr = VaultPtr of IntPtr
+
+    type VaultItemPtr = VaultItemPtr of IntPtr
+
+    type VaultHandle = VaultHandle of IntPtr
+    
