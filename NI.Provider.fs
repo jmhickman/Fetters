@@ -682,6 +682,7 @@
         let mutable (LsaProcessHandle _handle) = handle
         LsaFreeReturnBuffer(&_handle) |> ignore
 
+
     let closeLsaH (ptr) =
         let mutable ptr = ptr
         LsaFreeReturnBuffer(&ptr) |> ignore
