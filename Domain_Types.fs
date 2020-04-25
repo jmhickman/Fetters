@@ -4,6 +4,7 @@ module Fetters.DomainTypes
 
     open Microsoft.Win32
     open System
+    open System.Security
 
     // File types
     type InterestingFile = {
@@ -260,7 +261,7 @@ module Fetters.DomainTypes
         username : string
         domain : string
         logonID : uint32
-        userSID : string // probably wrong
+        userSID : Principal.SecurityIdentifier
         authenticationPkg : string
         logonType : string
         loginTime : DateTime

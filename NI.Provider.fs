@@ -230,8 +230,6 @@
     type KERB_RETRIEVE_TKT_RESPONSE =
         val mutable ticket : KERB_EXTERNAL_TICKET
 
-    
-
     [<Struct>]
     [<StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)>]
     type LOCAL_GROUP_MEMBER_INFO2 = 
@@ -247,7 +245,7 @@
         val mutable username : LSA_STRING_OUT
         val mutable loginDomain : LSA_STRING_OUT
         val mutable authenticationPackage : LSA_STRING_OUT
-        val mutable logonType : uint32
+        val mutable logonType : SECURITY_LOGON_TYPE
         val mutable session : uint32
         val mutable pSID : IntPtr
         val mutable loginTime : uint64
@@ -368,7 +366,7 @@
                                                [<Out>] int protocolStatus)
                                             
     [<DllImport("secur32.dll", SetLastError = true)>]
-    extern uint32 LsaFreeReturnBuffer(IntPtr buffer)
+    extern uint32 LsaFreeReturnBuffer(IntPtr& buffer)
 
     [<DllImport("secur32.dll", SetLastError = true)>]
     extern uint32 LsaEnumerateLogonSessions([<Out>] uint64& logonSessionCount, [<Out>] IntPtr& logonSessionList)
@@ -409,6 +407,15 @@
     ////////////////////////
     // Native function calls
     ////////////////////////
+
+    let marshalLSAString
+        (sourceStruct: LSA_STRING_OUT)
+        : string =
+        match sourceStruct with
+        | x when not(x.buffer = IntPtr.Zero) && 
+                 not(x.length = 0us) -> let unmanagedString = Marshal.PtrToStringAuto(sourceStruct.buffer, (int(sourceStruct.maxLength /2us))).Trim()
+                                        unmanagedString
+        |_ -> ""
 
     ////////////////////////////////
     // RDP Session Enumeration Calls
@@ -470,13 +477,13 @@
 
         let enumList = 
             allEnumeratedSessions 
-            |> Array.filter(fun _f -> _f.pSessionName.StartsWith("RDP"))
-            |> Array.map(fun _sess -> {state = _sess.State.ToString(); 
-                                       sessionID = _sess.SessionID;
-                                       sessionName = _sess.pSessionName;
-                                       hostName = _sess.pHostName;
-                                       username = _sess.pUserName;
-                                       remoteAddress = (rdpSessionReverseLookup _sess.SessionID)})
+            |> Array.filter(fun f -> f.pSessionName.StartsWith("RDP"))
+            |> Array.map(fun sess -> {state = sess.State.ToString(); 
+                                       sessionID = sess.SessionID;
+                                       sessionName = sess.pSessionName;
+                                       hostName = sess.pHostName;
+                                       username = sess.pUserName;
+                                       remoteAddress = (rdpSessionReverseLookup sess.SessionID)})
             |> Array.toList
 
         match enumList with
@@ -597,7 +604,11 @@
 
     let closeLsaHandle (handle: LsaProcessHandle) = 
         let mutable (LsaProcessHandle _handle) = handle
-        LsaFreeReturnBuffer(_handle) |> ignore
+        LsaFreeReturnBuffer(&_handle) |> ignore
+
+    let closeLsaH (ptr) =
+        let mutable ptr = ptr
+        LsaFreeReturnBuffer(&ptr) |> ignore
 
     let enumerateLsaLogonSessions () : (uint64 * LUIDPtr) =
         // Doesn't use the LsaProcessHandle, but requires SYSTEM token or equal privs
@@ -605,6 +616,7 @@
         let mutable luidPtr = IntPtr.Zero
 
         let ntstatus = LsaEnumerateLogonSessions(&countOfLUIDs, &luidPtr)
+        printfn "%i" ntstatus
         (countOfLUIDs, luidPtr |> LUIDPtr)
 
     let getLsaSessionData 
@@ -615,17 +627,19 @@
         // should be, so I'm leaving it out for now.
         let mutable sessionDataPtr = IntPtr.Zero
         let mutable (LUIDPtr _luidPtr) = luidPtr
-
-        [|0..int(count)- 1|]
-        |> Array.map(fun x -> 
-                     LsaGetLogonSessionData(_luidPtr, &sessionDataPtr) |> ignore
-                     let sessionData = Marshal.PtrToStructure<SECURITY_LOGON_SESSION_DATA>(sessionDataPtr)
-                     sessionDataPtr <- IntPtr.Add(sessionDataPtr, Marshal.SizeOf<SECURITY_LOGON_SESSION_DATA>())
-                     _luidPtr <- IntPtr.Add(_luidPtr, Marshal.SizeOf<LUID>())
-                     closeLsaHandle (sessionDataPtr |> LsaProcessHandle)
-                     sessionData)
-        |> Array.filter(fun _s -> not(_s.pSID = IntPtr.Zero)) // We only want results where there is a pSID
-        |> Array.toList
+        let sessionData = 
+            [|1..int(count)|]
+            |> Array.map(fun x -> 
+                         LsaGetLogonSessionData(_luidPtr, &sessionDataPtr) |> ignore
+                         let sessionData = Marshal.PtrToStructure<SECURITY_LOGON_SESSION_DATA>(sessionDataPtr)
+                         _luidPtr <- IntPtr.Add(_luidPtr, Marshal.SizeOf<LUID>())
+                         closeLsaH sessionDataPtr
+                         sessionData)
+             |> Array.filter(fun _s -> not(_s.pSID = IntPtr.Zero)) // We only want results where there is a pSID
+             |> Array.toList
+        
+        closeLsaHandle (_luidPtr |> LsaProcessHandle)
+        sessionData
 
     let fetchLsaSessions = enumerateLsaLogonSessions >> getLsaSessionData
 
@@ -703,8 +717,8 @@
         (ticket: KERB_TICKET_CACHE_INFO)
         : KerberosQueryTicket =
         let flags = Microsoft.FSharp.Core.LanguagePrimitives.EnumOfValue<uint32, Fetters.DomainTypes.KERB_TICKET_FLAGS>(ticket.ticketFlags)
-        let kerbTicket = {serverName = Marshal.PtrToStringAuto(ticket.serverName.buffer)
-                          realm = Marshal.PtrToStringAuto(ticket.realmName.buffer)
+        let kerbTicket = {serverName = marshalLSAString ticket.serverName
+                          realm = marshalLSAString ticket.realmName
                           startTime = DateTime.FromFileTime(ticket.startTime)
                           endTime = DateTime.FromFileTime(ticket.endTime)
                           renewTime = DateTime.FromFileTime(ticket.renewTime)
@@ -715,6 +729,13 @@
     let createKerberosRetrieveTicket
         (ticket: KERB_EXTERNAL_TICKET)
         : KerberosRetrieveTicket =
+        
+        let serviceTkt = Marshal.PtrToStructure<KERB_EXTERNAL_NAME>(ticket.ServiceName)
+        //let targetTkt = Marshal.PtrToStructure<KERB_EXTERNAL_NAME>(ticket.TargetName) caused NullReference Exceptions on 2012 box.
+        let clientTkt = Marshal.PtrToStructure<KERB_EXTERNAL_NAME>(ticket.ClientName)
+        let serviceName = marshalLSAString serviceTkt.names
+        let targetName = ""//marshalLSAString targetTkt.names
+        let clientName = marshalLSAString clientTkt.names
 
         let flags = Microsoft.FSharp.Core.LanguagePrimitives.EnumOfValue<uint32, KERB_TICKET_FLAGS>(ticket.Flags)
         let rawSessionKey = Array.create (ticket.SessionKey.length) 0uy
@@ -725,12 +746,12 @@
         Marshal.Copy(ticket.EncodedTicket, rawEncodedTicket, 0, ticket.EncodedTicketSize)
         let b64Ticket = Convert.ToBase64String(rawEncodedTicket)
 
-        let kerbTicket = {serviceName = Marshal.PtrToStringAuto(ticket.ServiceName)
-                          target = Marshal.PtrToStringAuto(ticket.TargetName)
-                          client = Marshal.PtrToStringAuto(ticket.ClientName)
-                          domain = Marshal.PtrToStringAuto(ticket.DomainName.buffer)
-                          targetDomain = Marshal.PtrToStringAuto(ticket.TargetDomainName.buffer)
-                          altTargetDomain = Marshal.PtrToStringAuto(ticket.AltTargetDomainName.buffer)
+        let kerbTicket = {serviceName = serviceName
+                          target = targetName
+                          client = clientName
+                          domain = marshalLSAString ticket.DomainName
+                          targetDomain = marshalLSAString ticket.TargetDomainName
+                          altTargetDomain = marshalLSAString ticket.AltTargetDomainName
                           sessionKeyType = KERB_ENCRYPTION_TYPE.GetName(typeof<KERB_ENCRYPTION_TYPE>, ticket.SessionKey.keyType)
                           base64SessionKey = b64SessionKey
                           keyExpiry = DateTime.FromFileTime(ticket.KeyExpirationTime)
@@ -748,16 +769,22 @@
          kQRecords: KerberosTicket list, 
          kRRecords: KerberosTicket list)
         : DomainSession =
-        let dsession = {username = Marshal.PtrToStringUni(sess.username.buffer)
-                        domain = Marshal.PtrToStringAuto(sess.loginDomain.buffer)
+        let SID = 
+             match getCurrentRole WindowsBuiltInRole.Administrator with
+             |true -> SecurityIdentifier(sess.pSID)
+             |false -> SecurityIdentifier("S-1-1-0")
+                     
+
+        let dsession = {username = marshalLSAString sess.username
+                        domain = marshalLSAString sess.loginDomain
                         logonID = sess.loginID.lower
-                        userSID = "bogusValue" // We'll come back around to this
-                        authenticationPkg = Marshal.PtrToStringAuto(sess.authenticationPackage.buffer)
+                        userSID = SID
+                        authenticationPkg = marshalLSAString sess.authenticationPackage
                         logonType = sess.logonType.ToString()
                         loginTime = DateTime.FromFileTime(int64(sess.loginTime))
-                        logonServer = Marshal.PtrToStringAuto(sess.logonServer.buffer)
-                        logonServerDnsDomain = Marshal.PtrToStringAuto(sess.dnsDomainName.buffer)
-                        userPrincipalName = Marshal.PtrToStringAuto(sess.upn.buffer)
+                        logonServer = marshalLSAString sess.logonServer
+                        logonServerDnsDomain = marshalLSAString sess.dnsDomainName
+                        userPrincipalName = marshalLSAString sess.upn
                         kerberosCachedTickets = kQRecords
                         kerberosTGTcontents = kRRecords}
         dsession
