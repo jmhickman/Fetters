@@ -12,7 +12,7 @@
     // DU "enums" for native code
     /////////////////////////////
 
-    //KERB Enum
+    //// KERB Enum ////
 
     [<Struct>]
     [<Flags>]
@@ -107,7 +107,7 @@
         |CachedRemoteInteractive
         |CachedUnlock  
 
-    //RDP Enum
+    //// RDP Enum ////
     
     [<Struct>]
     type WTS_CONNECTED_CLASS =
@@ -122,12 +122,49 @@
         |Down
         |Init
 
+    //// TCP dump Section ////
+
+    [<Struct>]
+    type MIB_TCP_STATE = 
+        |CLOSED = 1
+        |LISTEN = 2
+        |SYN_SENT = 3
+        |SYN_RCVD = 4
+        |ESTAB = 5
+        |FIN_WAIT1 = 6
+        |FIN_WAIT2 = 7
+        |CLOSE_WAIT = 8
+        |CLOSING = 9
+        |LAST_ACK = 10
+        |TIME_WAIT = 11
+        |DELETE_TCB = 12
+    
+    [<Struct>]
+    type SC_SERVICE_TAG_QUERY_TYPE =
+        |ServiceNameFromTagInformation = 1
+        |ServiceNamesReferencingModuleInformation = 2
+        |ServiceNameTagMappingInformation = 3
+    
+    [<Struct>]
+    type TCP_TABLE_CLASS =
+        |TCP_TABLE_BASIC_LISTENER
+        |TCP_TABLE_BASIC_CONNECTIONS
+        |TCP_TABLE_BASIC_ALL
+        |TCP_TABLE_OWNER_PID_LISTENER
+        |TCP_TABLE_OWNER_PID_CONNECTIONS
+        |TCP_TABLE_OWNER_PID_ALL
+        |TCP_TABLE_OWNER_MODULE_LISTENER
+        |TCP_TABLE_OWNER_MODULE_CONNECTIONS
+        |TCP_TABLE_OWNER_MODULE_ALL
+    
+    //// RDP Session Section ////
+
     [<Struct>]
     // Controls what query we make
     type WTS_INFO_CLASS =
         |WTSClientAddress = 14
 
-    // Vault section
+    //// Vault section ////
     
     [<Struct>]
     type VAULT_ELEMENT_TYPE = 
@@ -162,7 +199,7 @@
     // Structs for the native code
     //////////////////////////////
 
-    // LSA Section
+    //// LSA Section ////
 
     [<Struct>]
     [<StructLayout(LayoutKind.Sequential)>]
@@ -193,7 +230,7 @@
         val mutable lower: IntPtr
         val mutable upper: IntPtr
 
-    // KERB section
+    //// KERB section ////
 
     [<Struct>]
     [<StructLayout(LayoutKind.Sequential)>]
@@ -292,7 +329,7 @@
         val mutable dnsDomainName : LSA_STRING_OUT
         val mutable upn : LSA_STRING_OUT
 
-    // RDP section
+    //// RDP section ////
 
     [<Struct>]
     [<StructLayout(LayoutKind.Sequential)>]
@@ -324,6 +361,57 @@
     type KerberosTicketStruct = 
         |KERB_EXTERNAL_TKT of KERB_EXTERNAL_TICKET
         |KERB_TKT_CACHE_INFO of KERB_TICKET_CACHE_INFO
+
+    //// TCP Query Section ////
+    
+    [<Struct>]
+    [<StructLayout(LayoutKind.Sequential)>]
+    type MIB_TCPROW_OWNER_MODULE = 
+         val State : MIB_TCP_STATE
+         val LocalAddr : uint32
+         val LocalPort1 : byte
+         val LocalPort2 : byte
+         val LocalPort3 : byte
+         val LocalPort4 : byte
+         val RemoteAddr : uint32
+         val RemotePort1 : byte
+         val RemotePort2 : byte
+         val RemotePort3 : byte
+         val RemotePort4 : byte
+         val OwningPid : uint32 
+         val CreateTimestamp : uint64
+         val OwningModuleInfo0 : uint64
+         val OwningModuleInfo1 : uint64
+         val OwningModuleInfo2 : uint64
+         val OwningModuleInfo3 : uint64
+         val OwningModuleInfo4 : uint64
+         val OwningModuleInfo5 : uint64
+         val OwningModuleInfo6 : uint64
+         val OwningModuleInfo7 : uint64
+         val OwningModuleInfo8 : uint64
+         val OwningModuleInfo9 : uint64
+         val OwningModuleInfo10 : uint64
+         val OwningModuleInfo11 : uint64
+         val OwningModuleInfo12 : uint64
+         val OwningModuleInfo13 : uint64
+         val OwningModuleInfo14 : uint64
+         val OwningModuleInfo15 : uint64
+    
+    [<Struct>]
+    [<StructLayout(LayoutKind.Sequential)>]
+    type MIB_TCPTABLE_OWNER_MODULE =
+         val mutable numEntries : uint32
+         val mutable table : MIB_TCPROW_OWNER_MODULE
+    
+    [<Struct>]
+    [<StructLayout(LayoutKind.Sequential)>]
+    type SC_SERVICE_TAG_QUERY =
+        val processId : uint32
+        val serviceTag : uint32
+        val unknown : uint32
+        val buffer : IntPtr
+
+    //// Vault Dump Section ////
 
     [<Struct>]
     [<StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)>]
@@ -373,7 +461,7 @@
     // Import Declarations
     //////////////////////
 
-    //advapi32
+    //// advapi32 ////
     
     [<DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)>]
     extern bool LogonUser(string lpszUsername,
@@ -399,12 +487,20 @@
     [<DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)>]
     extern bool RevertToSelf()
 
-    //kernel32
+    [<DllImport("advapi32.dll", SetLastError = true)>]
+    extern uint32 I_QueryTagInformation(IntPtr Unknown, SC_SERVICE_TAG_QUERY_TYPE Type, [<Out>] SC_SERVICE_TAG_QUERY& Query)
+
+    //// iphlpapi ////
+    
+    [<DllImport("iphlpapi.dll", SetLastError = true)>]
+    extern uint32 GetExtendedTcpTable(IntPtr& pTcpTable, uint32& dwOutBufLen, bool sort, int ipVersion, TCP_TABLE_CLASS& tblClass, int reserved)
+    
+    //// kernel32 ////
     
     [<DllImport("kernel32.dll")>]
     extern bool CloseHandle(IntPtr handle)
 
-    //NetApi32
+    //// NetApi32 ////
 
     [<DllImport("Netapi32.dll")>]
     extern int NetApiBufferFree(IntPtr bufptr)
@@ -420,7 +516,7 @@
                                       [<Out>] int& totalEntries,
                                       [<Out>] IntPtr resumeHandle)
 
-    //secur32
+    //// secur32 ////
     
     [<DllImport("secur32.dll", SetLastError = true)>]
     //unverified
@@ -473,7 +569,7 @@
                                      [<Out>] IntPtr& ppSessionInfo,
                                      [<Out>] int& pCount)
     
-    //vaultcli
+    //// vaultcli ////
 
     [<DllImport("vaultcli.dll")>]
     extern int32 VaultOpenVault(Guid vaultGuid, uint32 offset, [<Out>] IntPtr& vaultHandle)
@@ -498,7 +594,7 @@
     
     
     
-    //wtsapi32
+    //// wtsapi32 ////
 
     [<DllImport("wtsapi32.dll", SetLastError = true)>]
     extern IntPtr WTSOpenServer(string pServerName)
@@ -996,8 +1092,10 @@
         deregisterLsaLogonProcess lsaHandle
         closeLsaHandle lsaHandle
         domainSessionRecord
-    
+
+    //////////////////
     //Credential Vault
+    //////////////////
 
     let enumerateVaults () 
         : (int32 * VaultGuid) =

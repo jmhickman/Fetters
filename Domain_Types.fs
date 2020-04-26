@@ -126,7 +126,7 @@ module Fetters.DomainTypes
         ieDump : string list
         mruCommands : string list
         rdpConnections : string list
-        vaultSecrets : string list
+        vaultSecrets : VaultRecord list
     }
 
     /////////////////////////////////
@@ -260,7 +260,6 @@ module Fetters.DomainTypes
         encryptionType : string
         ticketFlags: KERB_TICKET_FLAGS
         }
-
     
     type KerberosTicket =
         |KerberosRetrieveTicket of KerberosRetrieveTicket
