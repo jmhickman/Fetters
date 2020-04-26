@@ -2,6 +2,7 @@
 
     open System
     open System.Diagnostics
+    open System.Net
     open System.Runtime.InteropServices
     open System.Security.Principal
 
@@ -493,7 +494,7 @@
     //// iphlpapi ////
     
     [<DllImport("iphlpapi.dll", SetLastError = true)>]
-    extern uint32 GetExtendedTcpTable(IntPtr& pTcpTable, uint32& dwOutBufLen, bool sort, int ipVersion, TCP_TABLE_CLASS tblClass, int reserved)
+    extern uint32 GetExtendedTcpTable(IntPtr pTcpTable, uint32& dwOutBufLen, bool sort, int ipVersion, TCP_TABLE_CLASS tblClass, int reserved)
     
     //// kernel32 ////
     
@@ -1218,7 +1219,7 @@
         let mutable serviceTagQuery = SC_SERVICE_TAG_QUERY(processId = pid, serviceTag = serviceTag)
         
         let retcode = I_QueryTagInformation(IntPtr.Zero, SC_SERVICE_TAG_QUERY_TYPE.ServiceNameFromTagInformation, &serviceTagQuery)
-        printfn "%i" retcode
+        //printfn "%i" retcode
         match retcode with
         | x when x = 0u ->  Marshal.PtrToStringAuto(serviceTagQuery.buffer) |> Some
         | _ -> None
@@ -1227,18 +1228,47 @@
         let mutable tableBufferSize = 0u
         let mutable tablePtr = IntPtr.Zero
 
-        let retcode = GetExtendedTcpTable(&tablePtr, &tableBufferSize, true, 2, TCP_TABLE_CLASS.TCP_TABLE_OWNER_MODULE_ALL, 0)
-        printfn "retcode1: %i:::TableBufferSize: %i" retcode tableBufferSize
-        
+        let retcode = GetExtendedTcpTable(tablePtr, &tableBufferSize, true, 2, TCP_TABLE_CLASS.TCP_TABLE_OWNER_MODULE_ALL, 0)
+        //printfn "retcode1: %i:::TableBufferSize: %i::tablePtr: %i" retcode tableBufferSize tablePtr
+
         match tableBufferSize with
         |x when x > 0u -> 
-            let mutable tablePtr = Marshal.AllocHGlobal(int(tableBufferSize))
-            tableBufferSize <- 0u
-            GetExtendedTcpTable(&tablePtr, &tableBufferSize, true, 2, TCP_TABLE_CLASS.TCP_TABLE_OWNER_MODULE_ALL, 0)|> ignore
+            tablePtr <- Marshal.AllocHGlobal(int(tableBufferSize))
+            let retcode = GetExtendedTcpTable(tablePtr, &tableBufferSize, true, 2, TCP_TABLE_CLASS.TCP_TABLE_OWNER_MODULE_ALL, 0)
+            //printfn "tablePtr: %i:: tablebufferSz: %i:: retcode: %i" tablePtr tableBufferSize retcode
             tablePtr |> Some
-        | _ -> None
+        | _ -> Marshal.FreeHGlobal(tablePtr)
+               None
 
-//    let getTcpTableRows (tablePtr: IntPtr) : MIB_TCPROW_OWNER_MODULE list =
 
+    let getTcpTableRows (tablePtr: IntPtr option) : MIB_TCPROW_OWNER_MODULE list =
+        //printfn "Entered getTcpTableRows"
+        //printfn "tablePtr: %b" tablePtr.IsSome
+        let rowList = 
+            match tablePtr with
+            |Some tPtr -> let tcpTable = Marshal.PtrToStructure<MIB_TCPTABLE_OWNER_MODULE>(tPtr)
+                          let mutable rowPtr = IntPtr.Add(tPtr, Marshal.SizeOf<MIB_TCPTABLE_OWNER_MODULE>())
+                          //printfn "Count of rows: %i" tcpTable.numEntries
+                          [0u..(tcpTable.numEntries - 1u)]
+                          |> List.map(fun x -> //printfn "Entering loop count: %i" x
+                                               let rowStruct = Marshal.PtrToStructure<MIB_TCPROW_OWNER_MODULE>(rowPtr)
+                                               rowPtr <- IntPtr.Add(rowPtr, Marshal.SizeOf<MIB_TCPROW_OWNER_MODULE>())
+                                               rowStruct)
+            |None -> []
+        match tablePtr with
+        | Some x -> Marshal.FreeHGlobal(x)
+        | None -> ()
+        //printfn "Size of rowList: %i" rowList.Length
+        rowList
 
-//    let createTCPRecord (tcpRow: MIB_TCPROW_OWNER_MODULE) : TCPConnection =
+    let createTCPRecord (tcpRow: MIB_TCPROW_OWNER_MODULE) : TCPConnection =
+       
+        let tcpConnection = {localAddress = IPAddress(int64(tcpRow.LocalAddr)).ToString()
+                             remoteAddress = IPAddress(int64(tcpRow.RemoteAddr)).ToString()
+                             localport = BitConverter.ToUInt16([|tcpRow.LocalPort2;tcpRow.LocalPort1|], 0)
+                             remoteport = BitConverter.ToUInt16([|tcpRow.RemotePort2;tcpRow.RemotePort1|], 0)
+                             connectionState = tcpRow.State.ToString()
+                             pid = tcpRow.OwningPid
+                             service = getServiceNameInfo tcpRow.OwningPid (uint32(tcpRow.OwningModuleInfo0))
+                             }
+        tcpConnection

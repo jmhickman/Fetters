@@ -305,10 +305,12 @@ module Fetters.DomainTypes
     type TCPConnection = {
         localAddress : string
         remoteAddress : string
+        localport : uint16
+        remoteport : uint16
         connectionState : string
-        pid : uint16
+        pid : uint32
         service : string option
-        processName : string
+        
     }
 
     type UDPConnection = {
