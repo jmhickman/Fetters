@@ -8,3 +8,5 @@ open Fetters.dotNetFunctions
 
 
 // Testing/rework harness
+
+getTcpTable () |> ignore

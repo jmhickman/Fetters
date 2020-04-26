@@ -406,10 +406,10 @@
     [<Struct>]
     [<StructLayout(LayoutKind.Sequential)>]
     type SC_SERVICE_TAG_QUERY =
-        val processId : uint32
-        val serviceTag : uint32
-        val unknown : uint32
-        val buffer : IntPtr
+        val mutable processId : uint32
+        val mutable serviceTag : uint32
+        val mutable unknown : uint32
+        val mutable buffer : IntPtr
 
     //// Vault Dump Section ////
 
@@ -488,12 +488,12 @@
     extern bool RevertToSelf()
 
     [<DllImport("advapi32.dll", SetLastError = true)>]
-    extern uint32 I_QueryTagInformation(IntPtr Unknown, SC_SERVICE_TAG_QUERY_TYPE Type, [<Out>] SC_SERVICE_TAG_QUERY& Query)
+    extern uint32 I_QueryTagInformation(IntPtr nothing, SC_SERVICE_TAG_QUERY_TYPE Type, [<In>] [<Out>] SC_SERVICE_TAG_QUERY& Query)
 
     //// iphlpapi ////
     
     [<DllImport("iphlpapi.dll", SetLastError = true)>]
-    extern uint32 GetExtendedTcpTable(IntPtr& pTcpTable, uint32& dwOutBufLen, bool sort, int ipVersion, TCP_TABLE_CLASS& tblClass, int reserved)
+    extern uint32 GetExtendedTcpTable(IntPtr& pTcpTable, uint32& dwOutBufLen, bool sort, int ipVersion, TCP_TABLE_CLASS tblClass, int reserved)
     
     //// kernel32 ////
     
@@ -1210,5 +1210,35 @@
                                                lastModified = DateTime.FromFileTime(int64(vItem.LastModified))}
                             vaultRecord)
 
+    ////////////////////////////
+    //TCP Connection Enumeration
+    ////////////////////////////
+
+    let getServiceNameInfo (pid: uint32) (serviceTag: uint32) : string option =
+        let mutable serviceTagQuery = SC_SERVICE_TAG_QUERY(processId = pid, serviceTag = serviceTag)
+        
+        let retcode = I_QueryTagInformation(IntPtr.Zero, SC_SERVICE_TAG_QUERY_TYPE.ServiceNameFromTagInformation, &serviceTagQuery)
+        printfn "%i" retcode
+        match retcode with
+        | x when x = 0u ->  Marshal.PtrToStringAuto(serviceTagQuery.buffer) |> Some
+        | _ -> None
+
+    let getTcpTable () : IntPtr option = 
+        let mutable tableBufferSize = 0u
+        let mutable tablePtr = IntPtr.Zero
+
+        let retcode = GetExtendedTcpTable(&tablePtr, &tableBufferSize, true, 2, TCP_TABLE_CLASS.TCP_TABLE_OWNER_MODULE_ALL, 0)
+        printfn "retcode1: %i:::TableBufferSize: %i" retcode tableBufferSize
+        
+        match tableBufferSize with
+        |x when x > 0u -> 
+            let mutable tablePtr = Marshal.AllocHGlobal(int(tableBufferSize))
+            tableBufferSize <- 0u
+            GetExtendedTcpTable(&tablePtr, &tableBufferSize, true, 2, TCP_TABLE_CLASS.TCP_TABLE_OWNER_MODULE_ALL, 0)|> ignore
+            tablePtr |> Some
+        | _ -> None
+
+//    let getTcpTableRows (tablePtr: IntPtr) : MIB_TCPROW_OWNER_MODULE list =
 
 
+//    let createTCPRecord (tcpRow: MIB_TCPROW_OWNER_MODULE) : TCPConnection =
