@@ -20,5 +20,5 @@ getTcpTable ()
                       match x.service with
                       |Some xo -> printfn "Service name: %s" xo
                       |None -> ()
-                      printfn "=====End Record====="
+                      printfn "=====End Record=====\n"
                       )
