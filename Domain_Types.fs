@@ -112,10 +112,11 @@ module Fetters.DomainTypes
         | Recent_File
 
     type VaultRecord = {
-        resource : string
-        identity : string
-        packageSid : string
-        credential : string
+        name : string
+        resource : string option
+        identity : string option
+        packageSid : string option
+        credential : string option
         lastModified : DateTime
         }
 
@@ -371,6 +372,8 @@ module Fetters.DomainTypes
     type LsaAuthPackage = LsaAuthPackage of int
 
     type LUIDPtr = LUIDPtr of IntPtr
+
+    type VaultGuid = VaultGuid of IntPtr
 
     type VaultPtr = VaultPtr of IntPtr
 
