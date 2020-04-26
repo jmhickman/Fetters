@@ -1031,13 +1031,14 @@
         VaultEnumerateItems(vaultHandle, 512, &vaultItemCount, &vaultItem) |>ignore
         let vaultItems =
             [0..(vaultItemCount - 1)]
-            |> List.map(fun x -> match Environment.OSVersion.Version.Build with
-                                 | x when x > 7601 ->  let vaultStruct = Marshal.PtrToStructure<VAULT_ITEM_WIN8>(vaultItem)
-                                                       vaultItem <- IntPtr.Add(vaultItem, Marshal.SizeOf<VAULT_ITEM_WIN8>())
-                                                       vaultStruct |> WIN8VAULT
-                                 | _ -> let vaultStruct = Marshal.PtrToStructure<VAULT_ITEM_WIN7>(vaultItem)
-                                        vaultItem <- IntPtr.Add(vaultItem, Marshal.SizeOf<VAULT_ITEM_WIN7>())
-                                        vaultStruct |> WIN7VAULT)
+            |> List.map(fun x -> 
+                            match Environment.OSVersion.Version.Build with
+                            | x when x > 7601 ->  let vaultStruct = Marshal.PtrToStructure<VAULT_ITEM_WIN8>(vaultItem)
+                                                  vaultItem <- IntPtr.Add(vaultItem, Marshal.SizeOf<VAULT_ITEM_WIN8>())
+                                                  vaultStruct |> WIN8VAULT
+                            | _ -> let vaultStruct = Marshal.PtrToStructure<VAULT_ITEM_WIN7>(vaultItem)
+                                   vaultItem <- IntPtr.Add(vaultItem, Marshal.SizeOf<VAULT_ITEM_WIN7>())
+                                   vaultStruct |> WIN7VAULT)
                                  
         (vaultHandle |> VaultHandle, vaultItems)
 
@@ -1061,53 +1062,55 @@
 
     let createVaultRecord 
         (vaultHandle: VaultHandle, vaultItems: VaultItem list) 
-        //: (VAULT_ITEM_WIN8 * IntPtr) list =
         : VaultRecord list = 
-
         let mutable (VaultHandle vaultHandle) = vaultHandle
-        //let mutable passwordPtr = IntPtr.Zero
+
         vaultItems
-        |> List.map(fun vItem -> match vItem with
-                                 |WIN8VAULT vItem ->
-                                        let mutable passwordPtr = IntPtr.Zero
-                                        let retcode = VaultGetItem_WIN8(vaultHandle, 
-                                                                        vItem.SchemaId, 
-                                                                        vItem.pResourceElement,
-                                                                        vItem.pIdentityElement,
-                                                                        vItem.pPackageSid,
-                                                                        IntPtr.Zero,
-                                                                        0,
-                                                                        &passwordPtr)
-                                        (vItem |> WIN8VAULT, passwordPtr)
-                                 |WIN7VAULT vItem -> 
-                                        let mutable passwordPtr = IntPtr.Zero
-                                        let retcode = VaultGetItem_WIN7(vaultHandle,
-                                                                        vItem.SchemaId,
-                                                                        vItem.pResourceElement,
-                                                                        vItem.pIdentityElement,
-                                                                        IntPtr.Zero,
-                                                                        0,
-                                                                        &passwordPtr)
-                                        (vItem |> WIN7VAULT, passwordPtr))
+        |> List.map(fun vItem -> 
+                        match vItem with
+                        |WIN8VAULT vItem ->
+                            let mutable passwordPtr = IntPtr.Zero
+                            VaultGetItem_WIN8(vaultHandle, 
+                                              vItem.SchemaId, 
+                                              vItem.pResourceElement,
+                                              vItem.pIdentityElement,
+                                              vItem.pPackageSid,
+                                              IntPtr.Zero,
+                                              0,
+                                              &passwordPtr) |> ignore
+                            (vItem |> WIN8VAULT, passwordPtr)
+                        |WIN7VAULT vItem -> 
+                            let mutable passwordPtr = IntPtr.Zero
+                            VaultGetItem_WIN7(vaultHandle,
+                                              vItem.SchemaId,
+                                              vItem.pResourceElement,
+                                              vItem.pIdentityElement,
+                                              IntPtr.Zero,
+                                              0,
+                                              &passwordPtr) |> ignore
+                            (vItem |> WIN7VAULT, passwordPtr))
                                     
-        |>List.map(fun tuple -> let vItem, passwordPtr = tuple
-                                match vItem with
-                                | WIN8VAULT vItem -> let mutable passwordVaultItem = Marshal.PtrToStructure<VAULT_ITEM_WIN8>(passwordPtr)
-                                                     let vaultRecord = {name = Marshal.PtrToStringAuto(vItem.pszCredentialFriendlyName)
-                                                                        resource = getVaultElementContent vItem.pResourceElement
-                                                                        identity = getVaultElementContent vItem.pIdentityElement
-                                                                        packageSid = getVaultElementContent vItem.pPackageSid
-                                                                        credential = getVaultElementContent passwordVaultItem.pAuthenticatorElement
-                                                                        lastModified = DateTime.FromFileTime(int64(vItem.LastModified))}
-                                                     vaultRecord
-                                |WIN7VAULT vItem -> let mutable passwordVaultItem = Marshal.PtrToStructure<VAULT_ITEM_WIN7>(passwordPtr)
-                                                    let vaultRecord = {name = Marshal.PtrToStringAuto(vItem.pszCredentialFriendlyName)
-                                                                       resource = getVaultElementContent vItem.pResourceElement
-                                                                       identity = getVaultElementContent vItem.pIdentityElement
-                                                                       packageSid = None
-                                                                       credential = getVaultElementContent passwordVaultItem.pAuthenticatorElement
-                                                                       lastModified = DateTime.FromFileTime(int64(vItem.LastModified))}
-                                                    vaultRecord)
+        |>List.map(fun tuple -> 
+                        let vItem, passwordPtr = tuple
+                        match vItem with
+                        | WIN8VAULT vItem -> 
+                            let mutable passwordVaultItem = Marshal.PtrToStructure<VAULT_ITEM_WIN8>(passwordPtr)
+                            let vaultRecord = {name = Marshal.PtrToStringAuto(vItem.pszCredentialFriendlyName)
+                                               resource = getVaultElementContent vItem.pResourceElement
+                                               identity = getVaultElementContent vItem.pIdentityElement
+                                               packageSid = getVaultElementContent vItem.pPackageSid
+                                               credential = getVaultElementContent passwordVaultItem.pAuthenticatorElement
+                                               lastModified = DateTime.FromFileTime(int64(vItem.LastModified))}
+                            vaultRecord
+                        |WIN7VAULT vItem -> 
+                            let mutable passwordVaultItem = Marshal.PtrToStructure<VAULT_ITEM_WIN7>(passwordPtr)
+                            let vaultRecord = {name = Marshal.PtrToStringAuto(vItem.pszCredentialFriendlyName)
+                                               resource = getVaultElementContent vItem.pResourceElement
+                                               identity = getVaultElementContent vItem.pIdentityElement
+                                               packageSid = None
+                                               credential = getVaultElementContent passwordVaultItem.pAuthenticatorElement
+                                               lastModified = DateTime.FromFileTime(int64(vItem.LastModified))}
+                            vaultRecord)
 
 
 
