@@ -1272,3 +1272,4 @@
                              service = getServiceNameInfo tcpRow.OwningPid (uint32(tcpRow.OwningModuleInfo0))
                              }
         tcpConnection
+

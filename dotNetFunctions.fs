@@ -2,6 +2,7 @@
 // Common functionality in pure .net code.
 
     open System
+    open System.Net.NetworkInformation
     open System.Security.Principal
 
     let getCurrentRole (role: WindowsBuiltInRole) = 
