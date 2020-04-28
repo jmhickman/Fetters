@@ -4,6 +4,7 @@ module Fetters.DomainTypes
 
     open Microsoft.Win32
     open System
+    open System.Net
     open System.Security
 
     // File types
@@ -54,38 +55,41 @@ module Fetters.DomainTypes
     type Disk = {
         name : string
         size: string
-        mountpoint : string
-    }
+        mountpoint : string}
 
     type Firewall = {
         name : string
-        rules : string list
-    }
+        rules : string list}
+
+    type ArpTable = {
+        addresses : (IPAddress * string) list
+        adapterIndex : uint16}
+
+    type Interface = {
+        adapterIndex : uint16
+        adapterAddr : IPAddress
+        adapterMAC : string
+        gatewayAddr : IPAddress
+        dnsServers : IPAddress list
+        dhcpServers : IPAddress list
+        arpTable : ArpTable}
 
     type Network = {
-        // Try to find an IPAddress type
-        ifaces : string list
-        routes : string list
-        dns : string list
-        dhcp : string list
-    }
+        interfaces : Interface list}
 
     type PC = {
         hostname : string
-        is_vm : bool 
-    }
+        is_vm : bool}
 
     type Session = {
         token : string 
-        logon_type : string 
-    }
+        logon_type : string}
 
     type WindowsDetails = {
         winVer : string 
         runtimeVer: string 
         runtimeType : string //function output
-        build : string 
-    }
+        build : string}
 
     type System = {
         disks : Disk list

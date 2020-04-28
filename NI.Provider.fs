@@ -13,6 +13,15 @@
     // DU "enums" for native code
     /////////////////////////////
 
+    //// Arp secion ////
+
+    type ArpEntryType =
+        |Other = 1
+        |Invalid = 2
+        |Dynamic = 3
+        |Static = 4
+
+
     //// KERB Enum ////
 
     [<Struct>]
@@ -199,6 +208,32 @@
     //////////////////////////////
     // Structs for the native code
     //////////////////////////////
+
+    
+    //// Arp Section ////
+
+    [<Struct>]
+    [<StructLayout(LayoutKind.Sequential)>]
+    type MIB_IPNETROW = 
+        val mutable dwIndex : int32
+        val mutable dwPhysAddrLen : int32
+        val mutable mac0 : byte
+        val mutable mac1 : byte
+        val mutable mac2 : byte
+        val mutable mac3 : byte
+        val mutable mac4 : byte
+        val mutable mac5 : byte
+        val mutable mac6 : byte
+        val mutable mac7 : byte
+        val mutable dwAddr : int32
+        val mutable dwType : int32
+
+    [<Struct>]
+    [<StructLayout(LayoutKind.Sequential)>]
+    type MIB_IPNETTABLE = 
+        val mutable numEntries : int32
+        val mutable tablePtr : IntPtr
+    
 
     //// LSA Section ////
 
@@ -1273,4 +1308,12 @@
                              service = getServiceNameInfo tcpRow.OwningPid (uint32(tcpRow.OwningModuleInfo0))
                              }
         tcpConnection
+    
+    ///////////////////////
+    //Arp Table Enumeration
+    ///////////////////////
+
+    let getLocalArpTables ()
+        : ArpTable list =
+
 
