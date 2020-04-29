@@ -8,4 +8,5 @@ open Fetters.dotNetFunctions
 
 
 // Testing/rework harness
+getLocalArpTables ()
 

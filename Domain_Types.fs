@@ -61,9 +61,11 @@ module Fetters.DomainTypes
         name : string
         rules : string list}
 
+    type ArpTableByInd = {
+        indexaddresses : (int32 * (IPAddress * string))}
+
     type ArpTable = {
-        addresses : (IPAddress * string) list
-        adapterIndex : uint16}
+        addresses : (IPAddress * string) list}
 
     type Interface = {
         adapterIndex : uint16

@@ -215,17 +215,29 @@
     [<Struct>]
     [<StructLayout(LayoutKind.Sequential)>]
     type MIB_IPNETROW = 
+        [<MarshalAs(UnmanagedType.U4)>]
         val mutable dwIndex : int32
+        [<MarshalAs(UnmanagedType.U4)>]
         val mutable dwPhysAddrLen : int32
+        [<MarshalAs(UnmanagedType.U1)>]
         val mutable mac0 : byte
+        [<MarshalAs(UnmanagedType.U1)>]
         val mutable mac1 : byte
+        [<MarshalAs(UnmanagedType.U1)>]
         val mutable mac2 : byte
+        [<MarshalAs(UnmanagedType.U1)>]
         val mutable mac3 : byte
+        [<MarshalAs(UnmanagedType.U1)>]
         val mutable mac4 : byte
+        [<MarshalAs(UnmanagedType.U1)>]
         val mutable mac5 : byte
+        [<MarshalAs(UnmanagedType.U1)>]
         val mutable mac6 : byte
+        [<MarshalAs(UnmanagedType.U1)>]
         val mutable mac7 : byte
+        [<MarshalAs(UnmanagedType.U4)>]
         val mutable dwAddr : int32
+        [<MarshalAs(UnmanagedType.U4)>]
         val mutable dwType : int32
 
     [<Struct>]
@@ -530,6 +542,9 @@
     
     [<DllImport("iphlpapi.dll", SetLastError = true)>]
     extern uint32 GetExtendedTcpTable(IntPtr pTcpTable, uint32& dwOutBufLen, bool sort, int ipVersion, TCP_TABLE_CLASS tblClass, int reserved)
+
+    [<DllImport("iphlpapi.dll", SetLastError = true)>]
+    extern int GetIpNetTable(IntPtr pIpNetTable, int& pdwSize, bool bOrder)
     
     //// kernel32 ////
     
@@ -1314,6 +1329,26 @@
     ///////////////////////
 
     let getLocalArpTables ()
-        : ArpTable list =
+        : ArpTableByInd list =
+        let mutable tableSize = 0
+        let mutable tablePtr = IntPtr.Zero
+        let mutable tRowPtr = IntPtr.Zero
 
+        GetIpNetTable(tablePtr, &tableSize, false) |> ignore
+        tablePtr <- Marshal.AllocHGlobal(tableSize)
 
+        GetIpNetTable(tablePtr, &tableSize, false) |> ignore
+
+        let tcpTable = Marshal.PtrToStructure<MIB_IPNETTABLE>(tablePtr)
+        tRowPtr <- IntPtr.Add(tablePtr, 4)
+
+        [0..int(tcpTable.numEntries)- 1]
+        |> List.map(fun x -> let tcpRow = Marshal.PtrToStructure<MIB_IPNETROW>(tRowPtr)
+                             tRowPtr <- IntPtr.Add(tRowPtr, Marshal.SizeOf<MIB_IPNETROW>())
+                             tcpRow)
+        |> List.filter(fun row -> row.dwType = 3) // My opinionated belief that non-dynamic entries are mostly useless information
+        |> List.map(fun row -> let addr = IPAddress(BitConverter.GetBytes(row.dwAddr))
+                               let hwaddr = BitConverter.ToString([|row.mac0;row.mac1;row.mac2;row.mac3;row.mac4;row.mac5|]) 
+        
+                               let arpTableByIndex = {indexaddresses = (row.dwIndex,(addr, hwaddr))}
+                               arpTableByIndex)
