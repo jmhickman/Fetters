@@ -167,6 +167,15 @@
         |TCP_TABLE_OWNER_MODULE_CONNECTIONS
         |TCP_TABLE_OWNER_MODULE_ALL
     
+    //// UDP Section ////
+
+    [<Struct>]
+    type UDP_TABLE_CLASS = 
+        |UDP_TABLE_BASIC
+        |UDP_TABLE_OWNER_PID
+        |UDP_TABLE_OWNER_MODULE
+    
+    
     //// RDP Session Section ////
 
     [<Struct>]
@@ -215,29 +224,17 @@
     [<Struct>]
     [<StructLayout(LayoutKind.Sequential)>]
     type MIB_IPNETROW = 
-        [<MarshalAs(UnmanagedType.U4)>]
         val mutable dwIndex : int32
-        [<MarshalAs(UnmanagedType.U4)>]
         val mutable dwPhysAddrLen : int32
-        [<MarshalAs(UnmanagedType.U1)>]
         val mutable mac0 : byte
-        [<MarshalAs(UnmanagedType.U1)>]
         val mutable mac1 : byte
-        [<MarshalAs(UnmanagedType.U1)>]
         val mutable mac2 : byte
-        [<MarshalAs(UnmanagedType.U1)>]
         val mutable mac3 : byte
-        [<MarshalAs(UnmanagedType.U1)>]
         val mutable mac4 : byte
-        [<MarshalAs(UnmanagedType.U1)>]
         val mutable mac5 : byte
-        [<MarshalAs(UnmanagedType.U1)>]
         val mutable mac6 : byte
-        [<MarshalAs(UnmanagedType.U1)>]
         val mutable mac7 : byte
-        [<MarshalAs(UnmanagedType.U4)>]
         val mutable dwAddr : int32
-        [<MarshalAs(UnmanagedType.U4)>]
         val mutable dwType : int32
 
     [<Struct>]
@@ -451,6 +448,43 @@
          val mutable numEntries : uint32
          val mutable table : MIB_TCPROW_OWNER_MODULE
     
+    //// UDP Section ////
+
+    [<Struct>]
+    [<StructLayout(LayoutKind.Sequential)>]
+    type MIB_UDPROW_OWNER_MODULE =
+       val LocalAddr : uint32
+       val LocalPort1 : byte
+       val LocalPort2 : byte
+       val LocalPort3 : byte
+       val LocalPort4 : byte
+       val OwningPid : uint32
+       val CreateTimestamp : uint64
+       val SpecificPortBind_Flags : uint32
+       val OwningModuleInfo0 : uint64
+       val OwningModuleInfo1 : uint64
+       val OwningModuleInfo2 : uint64
+       val OwningModuleInfo3 : uint64
+       val OwningModuleInfo4 : uint64
+       val OwningModuleInfo5 : uint64
+       val OwningModuleInfo6 : uint64
+       val OwningModuleInfo7 : uint64
+       val OwningModuleInfo8 : uint64
+       val OwningModuleInfo9 : uint64
+       val OwningModuleInfo10 : uint64
+       val OwningModuleInfo11 : uint64
+       val OwningModuleInfo12 : uint64
+       val OwningModuleInfo13 : uint64
+       val OwningModuleInfo14 : uint64
+       val OwningModuleInfo15 : uint64
+
+    [<Struct>]
+    [<StructLayout(LayoutKind.Sequential)>]
+    type MIB_UDPTABLE_OWNER_MODULE =
+        val numEntries : uint32
+        val table : MIB_UDPROW_OWNER_MODULE
+
+
     [<Struct>]
     [<StructLayout(LayoutKind.Sequential)>]
     type SC_SERVICE_TAG_QUERY =
@@ -542,6 +576,9 @@
     
     [<DllImport("iphlpapi.dll", SetLastError = true)>]
     extern uint32 GetExtendedTcpTable(IntPtr pTcpTable, uint32& dwOutBufLen, bool sort, int ipVersion, TCP_TABLE_CLASS tblClass, int reserved)
+
+    [<DllImport("iphlpapi.dll", SetLastError = true)>]
+    extern uint32 GetExtendedUdpTable(IntPtr pUdpTable, uint32& dwOutBufLen, bool sort, int ipVersion, UDP_TABLE_CLASS tblClass, int reserved)
 
     [<DllImport("iphlpapi.dll", SetLastError = true)>]
     extern int GetIpNetTable(IntPtr pIpNetTable, int& pdwSize, bool bOrder)
@@ -1314,8 +1351,8 @@
     let createTCPRecord 
         (tcpRow: MIB_TCPROW_OWNER_MODULE) 
         : TCPConnection =
-        let tcpConnection = {localAddress = IPAddress(int64(tcpRow.LocalAddr)).ToString()
-                             remoteAddress = IPAddress(int64(tcpRow.RemoteAddr)).ToString()
+        let tcpConnection = {localAddress = IPAddress(int64(tcpRow.LocalAddr))
+                             remoteAddress = IPAddress(int64(tcpRow.RemoteAddr))
                              localport = BitConverter.ToUInt16([|tcpRow.LocalPort2;tcpRow.LocalPort1|], 0)
                              remoteport = BitConverter.ToUInt16([|tcpRow.RemotePort2;tcpRow.RemotePort1|], 0)
                              connectionState = tcpRow.State.ToString()
@@ -1323,7 +1360,57 @@
                              service = getServiceNameInfo tcpRow.OwningPid (uint32(tcpRow.OwningModuleInfo0))
                              }
         tcpConnection
-    
+
+    ///////////////////////////
+    //UDP conection enumeration
+    ///////////////////////////
+
+    let getUdpTable () : IntPtr option = 
+        let mutable tableBufferSize = 0u
+        let mutable tablePtr = IntPtr.Zero
+
+        GetExtendedUdpTable(tablePtr, &tableBufferSize, true, 2, UDP_TABLE_CLASS.UDP_TABLE_OWNER_MODULE, 0) |> ignore
+
+        match tableBufferSize with
+        |x when x > 0u -> 
+            tablePtr <- Marshal.AllocHGlobal(int(tableBufferSize))
+            let retcode = GetExtendedUdpTable(tablePtr, &tableBufferSize, true, 2, UDP_TABLE_CLASS.UDP_TABLE_OWNER_MODULE, 0) |> ignore
+            tablePtr |> Some
+        | _ -> Marshal.FreeHGlobal(tablePtr)
+               None
+
+
+    let getUdpTableRows 
+        (tablePtr: IntPtr option) 
+        : MIB_UDPROW_OWNER_MODULE list =
+        let rowList = 
+            match tablePtr with
+            |Some tPtr -> 
+                let udpTable = Marshal.PtrToStructure<MIB_UDPTABLE_OWNER_MODULE>(tPtr)
+                let mutable rowPtr = IntPtr.Add(tPtr, Marshal.SizeOf<MIB_UDPTABLE_OWNER_MODULE>())
+                [0u..(udpTable.numEntries - 1u)]
+                |> List.map(fun x -> 
+                                let rowStruct = Marshal.PtrToStructure<MIB_UDPROW_OWNER_MODULE>(rowPtr)
+                                rowPtr <- IntPtr.Add(rowPtr, Marshal.SizeOf<MIB_UDPROW_OWNER_MODULE>())
+                                rowStruct)
+            |None -> []
+        
+        match tablePtr with
+        | Some x -> Marshal.FreeHGlobal(x)
+        | None -> ()
+        rowList
+
+    let createUdpRecord 
+        (udpRow: MIB_UDPROW_OWNER_MODULE) 
+        : UDPListener =
+        let udpListener = {localAddress = IPAddress(int64(udpRow.LocalAddr))
+                           localport = BitConverter.ToUInt16([|udpRow.LocalPort2;udpRow.LocalPort1|], 0) 
+                           pid = udpRow.OwningPid
+                           service = getServiceNameInfo udpRow.OwningPid (uint32(udpRow.OwningModuleInfo0))}
+        udpListener
+
+
+
     ///////////////////////
     //Arp Table Enumeration
     ///////////////////////

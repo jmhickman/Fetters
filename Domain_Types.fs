@@ -309,22 +309,19 @@ module Fetters.DomainTypes
         }
 
     type TCPConnection = {
-        localAddress : string
-        remoteAddress : string
+        localAddress : IPAddress
+        remoteAddress : IPAddress
         localport : uint16
         remoteport : uint16
         connectionState : string
         pid : uint32
-        service : string option
-        
-    }
+        service : string option}
 
-    type UDPConnection = {
-        localAddress : string
-        pid : uint16
-        service : string option
-        processName : string
-    }
+    type UDPListener = {
+        localAddress : IPAddress
+        localport : uint16
+        pid : uint32
+        service : string option}
 
     type SystemDynamicAttributes = {
         domainSessions : DomainSession list
@@ -333,7 +330,7 @@ module Fetters.DomainTypes
         processes : Process list
         rdpSessions : RdpSession list
         tcpConnections : TCPConnection list
-        udpTraffic : UDPConnection list
+        udpTraffic : UDPListener list
     }
 
     type FullOutput = {
