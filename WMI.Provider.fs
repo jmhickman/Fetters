@@ -29,71 +29,73 @@
     /////////////////////////////////
     // WMI Management Object Creation
     /////////////////////////////////
-    let private createManagementPath path = new ManagementPath(path)
+    let private initializeManagementScope 
+        (path: string)
+        : ManagementScope = 
 
-    let private createManagementScope (managementPath: ManagementPath) = 
-        new ManagementScope(managementPath)
+        let mpath = new ManagementPath(path)
+        let mScope = new ManagementScope(mpath)
+        mScope
 
-    let private initializeManagementScope path = 
-        createManagementPath path |> createManagementScope
-
-    let private createObjectQuery query = new ObjectQuery(query)
-
-    let private createObjectSearcher objectQuery connectedScope = 
-        new ManagementObjectSearcher(query = objectQuery, 
-                                    scope = connectedScope)
-
-    // Must connect the scope, which can fail
-    let private connectManagementScope (managementScope: ManagementScope) =
+    let private connectManagementScope 
+        (managementScope: ManagementScope) 
+        : unit option =
         try
-          Some (managementScope.Connect())
+            Some (managementScope.Connect())
         with
         | _ -> None
 
-    // Finally, create the ManagementObjectSearcher
-    let private initializeObjectSearcher query 
-            (connectedScope: ManagementScope) = 
-        createObjectQuery query 
-        |> fun _objq -> createObjectSearcher _objq connectedScope
-    
+    let private createObjectQuery query = new ObjectQuery(query)
+
+    let private createObjectSearcher 
+        (objectQuery: ObjectQuery)
+        (connectedScope: ManagementScope) 
+        : ManagementObjectSearcher = 
+        
+        new ManagementObjectSearcher(connectedScope, objectQuery)
+        
     // Get the results of the WMI query, and then convert to a useful output
     // Since the wmiResults are in a strange not-collection, I have to either
     // do this, or convert to a list with a yield anyway if I want to use
     // nested List.map. 
     let private generateWmiResultsList 
             (mObjectSearcher: ManagementObjectSearcher) 
-            (wmiQueryFilters: string list) = 
+            (wmiQueryFilters: string list) 
+            : string list list= 
         let wmiResults = mObjectSearcher.Get()
-        let _results = 
-            [   for _r in wmiResults do
-                    [
-                    for _f in wmiQueryFilters do
-                         yield (_r.[_f]).ToString()
-                    ]    
-            ]
-        _results
          
-    let getWmiSearchResults (wmiSingleQuery: WmiSingleQuery) =
-        let _path = wmiSingleQuery.wmiPath
-        let {wmiSqlQuery= _query; wmiFilterList= _filter} = 
-            wmiSingleQuery.wmiQuery
-        let initScope = initializeManagementScope _path
-        let connectedScope = connectManagementScope initScope
+        [for _r in wmiResults do
+            [for _f in wmiQueryFilters do
+                 yield (_r.[_f]).ToString()
+            ]    
+        ]
+         
+    let private getWmiSearchResults 
+        (wmiSingleQuery: WmiSingleQuery) 
+        : string list list=
+        let path = wmiSingleQuery.wmiPath
+        let {wmiSqlQuery= query; wmiFilterList= filters} = wmiSingleQuery.wmiQuery
+        let mScope = initializeManagementScope path
+        let oQuery = createObjectQuery query
+
         // We only initialize the ObjectSearcher if the scope object connected
-        match (connectedScope) with
-        | Some () -> initializeObjectSearcher _query initScope
-                     |> fun x -> generateWmiResultsList x _filter
+        match connectManagementScope mScope with
+        | Some () -> createObjectSearcher oQuery mScope
+                     |> fun x -> generateWmiResultsList x filters
         | None -> [connectionError]
 
-    let createRecord 
-            (rawObject: (string list) list) 
-            (outputRecordType: WmiRecord) : WmiRecord list = 
+    let private createRecord 
+        (rawObject: string list list) 
+        (outputRecordType: WmiRecord) 
+        : WmiRecord list = 
         match outputRecordType with
         | User x -> rawObject 
                     |> List.map(fun _l -> 
-                    User {name = _l.[0]; domain = _l.[1]; sid = _l.[2]})
+                                User {name = _l.[0]; domain = _l.[1]; sid = _l.[2]})
         | Disk x -> rawObject 
                     |> List.map(fun _l -> 
-                    Disk {name = _l.[0]; size = _l.[1]; mountpoint = _l.[2]})
+                                Disk {name = _l.[0]; size = _l.[1]; mountpoint = _l.[2]})
 
-        
+    let queryWMI = getWmiSearchResults >> createRecord
+    // change outputRecordType to the planned semaphore instead of overloading the WmiRecord type.
+    // the signature should look like semaphore -> WmiRecord lsit

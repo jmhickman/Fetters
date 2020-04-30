@@ -167,6 +167,28 @@
         |TCP_TABLE_OWNER_MODULE_CONNECTIONS
         |TCP_TABLE_OWNER_MODULE_ALL
     
+    //// Token Section ////
+    [<Struct>]
+    type TOKEN_INFORMATION_CLASS = 
+        |TokenUser  
+        |TokenGroups
+        |TokenPrivileges
+        |TokenOwner
+        |TokenPrimaryGroup
+        |TokenDefaultDacl
+        |TokenSource
+        |TokenType
+        |TokenImpersonationLevel
+        |TokenStatistics
+        |TokenRestrictedSids
+        |TokenSessionId
+        |TokenGroupsAndPrivileges
+        |TokenSessionReference
+        |TokenSandBoxInert
+        |TokenAuditPolicy
+        |TokenOrigin
+
+
     //// UDP Section ////
 
     [<Struct>]
@@ -564,6 +586,9 @@
                               [<Out>] IntPtr& duplicatTokenHandle)
 
     [<DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)>]
+    extern bool GetTokenInformation(IntPtr TokenHandle, TOKEN_INFORMATION_CLASS& TokenInformationClass, [<Out>] IntPtr& TokenInformation, [<Out>] int& TokenInformationLength, [<Out>] int32& ReturnLength)
+
+    [<DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)>]
     extern bool ImpersonateLoggedOnUser(IntPtr tokenHandle)
 
     [<DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)>]
@@ -574,6 +599,9 @@
 
     //// iphlpapi ////
     
+    [<DllImport("iphlpapi.dll", SetLastError = true)>]
+    extern int FreeMibTable(IntPtr plpNetTable)
+
     [<DllImport("iphlpapi.dll", SetLastError = true)>]
     extern uint32 GetExtendedTcpTable(IntPtr pTcpTable, uint32& dwOutBufLen, bool sort, int ipVersion, TCP_TABLE_CLASS tblClass, int reserved)
 
@@ -697,7 +725,11 @@
     ////////////////////////
     // Native function calls
     ////////////////////////
+    //////////////////////////
+    // Native Function Helpers
+    //////////////////////////
 
+    // For extracting LSA_STRING_OUT 
     let marshalLSAString
         (sourceStruct: LSA_STRING_OUT)
         : string =
@@ -707,6 +739,7 @@
                                         unmanagedString
         |_ -> ""
 
+    // For extracting strings at an offset from a Ptr. Used in the Vault enum code
     let marshalIndirectString
         (offset: int)
         (ptr: IntPtr)
@@ -715,6 +748,7 @@
         let strPtr = Marshal.ReadIntPtr(oPtr)
         Marshal.PtrToStringAuto(strPtr)
 
+    // Useful preset for vault code
     let marshalVaultString = marshalIndirectString 16
 
     //////////////////////////
@@ -1059,7 +1093,7 @@
                           base64SessionKey = b64SessionKey
                           keyExpiry = DateTime.FromFileTime(ticket.KeyExpirationTime)
                           flags = flags
-                          startTime = DateTime.FromFileTime(ticket.KeyExpirationTime)
+                          startTime = DateTime.FromFileTime(ticket.StartTime)
                           endTime = DateTime.FromFileTime(ticket.EndTime)
                           renewTime = DateTime.FromFileTime(ticket.RenewUntil)
                           skewTime = DateTime.FromFileTime(ticket.TimeSkew)
@@ -1428,14 +1462,17 @@
 
         let tcpTable = Marshal.PtrToStructure<MIB_IPNETTABLE>(tablePtr)
         tRowPtr <- IntPtr.Add(tablePtr, 4)
+        let arpTableByIndexResult = 
+            [0..int(tcpTable.numEntries)- 1]
+            |> List.map(fun x -> let tcpRow = Marshal.PtrToStructure<MIB_IPNETROW>(tRowPtr)
+                                 tRowPtr <- IntPtr.Add(tRowPtr, Marshal.SizeOf<MIB_IPNETROW>())
+                                 tcpRow)
 
-        [0..int(tcpTable.numEntries)- 1]
-        |> List.map(fun x -> let tcpRow = Marshal.PtrToStructure<MIB_IPNETROW>(tRowPtr)
-                             tRowPtr <- IntPtr.Add(tRowPtr, Marshal.SizeOf<MIB_IPNETROW>())
-                             tcpRow)
-        |> List.filter(fun row -> row.dwType = 3) // My opinionated belief that non-dynamic entries are mostly useless information
-        |> List.map(fun row -> let addr = IPAddress(BitConverter.GetBytes(row.dwAddr))
-                               let hwaddr = BitConverter.ToString([|row.mac0;row.mac1;row.mac2;row.mac3;row.mac4;row.mac5|]) 
+            |> List.filter(fun row -> row.dwType = 3) // My opinionated belief that non-dynamic entries are mostly useless information
+            |> List.map(fun row -> let addr = IPAddress(BitConverter.GetBytes(row.dwAddr))
+                                   let hwaddr = BitConverter.ToString([|row.mac0;row.mac1;row.mac2;row.mac3;row.mac4;row.mac5|]) 
         
-                               let arpTableByIndex = {indexaddresses = (row.dwIndex,(addr, hwaddr))}
-                               arpTableByIndex)
+                                   let arpTableByIndex = {indexaddresses = (row.dwIndex,(addr, hwaddr))}
+                                   arpTableByIndex)
+        FreeMibTable(tablePtr) |> ignore
+        arpTableByIndexResult
