@@ -13,7 +13,7 @@
     // DU "enums" for native code
     /////////////////////////////
 
-    //// Arp secion ////
+    //// Arp section ////
 
     type ArpEntryType =
         |Other = 1
@@ -101,7 +101,6 @@
         |KerbQueryS4U2ProxyCacheMessage = 31u
     
     [<Struct>]
-    //unverified
     type SECURITY_LOGON_TYPE =
         |UndefinedLogonType
         |Interactive
@@ -117,7 +116,7 @@
         |CachedRemoteInteractive
         |CachedUnlock  
 
-    //// RDP Enum ////
+    //// RDP Enum Section ////
     
     [<Struct>]
     type WTS_CONNECTED_CLASS =
@@ -170,24 +169,23 @@
     //// Token Section ////
     [<Struct>]
     type TOKEN_INFORMATION_CLASS = 
-        |TokenUser  
-        |TokenGroups
-        |TokenPrivileges
-        |TokenOwner
-        |TokenPrimaryGroup
-        |TokenDefaultDacl
-        |TokenSource
-        |TokenType
-        |TokenImpersonationLevel
-        |TokenStatistics
-        |TokenRestrictedSids
-        |TokenSessionId
-        |TokenGroupsAndPrivileges
-        |TokenSessionReference
-        |TokenSandBoxInert
-        |TokenAuditPolicy
-        |TokenOrigin
-
+        |TokenUser = 1
+        |TokenGroups = 2
+        |TokenPrivileges = 3
+        |TokenOwner = 4
+        |TokenPrimaryGroup = 5
+        |TokenDefaultDacl = 6
+        |TokenSource = 7
+        |TokenType = 8
+        |TokenImpersonationLevel = 9
+        |TokenStatistics = 10
+        |TokenRestrictedSids = 11
+        |TokenSessionId = 12
+        |TokenGroupsAndPrivileges = 13
+        |TokenSessionReference = 14
+        |TokenSandBoxInert = 15
+        |TokenAuditPolicy = 16
+        |TokenOrigin = 17
 
     //// UDP Section ////
 
@@ -201,7 +199,6 @@
     //// RDP Session Section ////
 
     [<Struct>]
-    // Controls what query we make
     type WTS_INFO_CLASS =
         |WTSClientAddress = 14
 
@@ -470,6 +467,20 @@
          val mutable numEntries : uint32
          val mutable table : MIB_TCPROW_OWNER_MODULE
     
+    //// Token Section ////
+    [<Struct>]
+    [<StructLayout(LayoutKind.Sequential)>]
+    type LUID_AND_ATTRIBUTES = 
+        val mutable luid : LUID
+        val mutable attributes : int32
+    
+    [<Struct>]
+    [<StructLayout(LayoutKind.Sequential)>]
+    type TOKEN_PRIVILEGES = 
+        val mutable privilegeCount : int32
+        val mutable privilegeArray : IntPtr
+
+    
     //// UDP Section ////
 
     [<Struct>]
@@ -586,8 +597,11 @@
                               [<Out>] IntPtr& duplicatTokenHandle)
 
     [<DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)>]
-    extern bool GetTokenInformation(IntPtr TokenHandle, TOKEN_INFORMATION_CLASS& TokenInformationClass, [<Out>] IntPtr& TokenInformation, [<Out>] int& TokenInformationLength, [<Out>] int32& ReturnLength)
+    extern bool GetTokenInformation(IntPtr TokenHandle, TOKEN_INFORMATION_CLASS TokenInformationClass, IntPtr TokenInformation, [<Out>] int TokenInformationLength, [<Out>] int32& ReturnLength)
 
+    [<DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Ansi)>]
+    extern bool LookupPrivilegeName(string lpSystemName, IntPtr lpLuid, IntPtr lpName, [<Out>] int32& cchName )
+    
     [<DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)>]
     extern bool ImpersonateLoggedOnUser(IntPtr tokenHandle)
 
@@ -1476,3 +1490,33 @@
                                    arpTableByIndex)
         FreeMibTable(tablePtr) |> ignore
         arpTableByIndexResult
+
+    /////////////////////////////
+    //Token Privilege Enumeration
+    /////////////////////////////
+
+    let getTokenPrivInformation () =
+
+        let mutable tokenInfoLength = 0
+        let mutable tokenInfo = IntPtr.Zero
+        
+        GetTokenInformation(WindowsIdentity.GetCurrent().Token, TOKEN_INFORMATION_CLASS.TokenPrivileges, tokenInfo, tokenInfoLength, &tokenInfoLength) |> ignore
+        tokenInfo <- Marshal.AllocHGlobal(tokenInfoLength)
+        GetTokenInformation(WindowsIdentity.GetCurrent().Token, TOKEN_INFORMATION_CLASS.TokenPrivileges, tokenInfo, tokenInfoLength, &tokenInfoLength) |> ignore
+        let tokenPrivs = Marshal.PtrToStructure<TOKEN_PRIVILEGES>(tokenInfo)
+        let mutable privPtr = IntPtr.Add(tokenInfo, 4)
+        
+        let privList = 
+            [0..(tokenPrivs.privilegeCount - 1)]
+            |> List.map(fun count ->  let mutable cchName = 0
+                                      let mutable stringPtr = IntPtr.Zero
+                                      LookupPrivilegeName("", privPtr, stringPtr, &cchName) |> ignore
+                                      stringPtr <- Marshal.AllocHGlobal(cchName)
+                                      LookupPrivilegeName("", privPtr, stringPtr, &cchName) |> ignore
+                                      let privString =  Marshal.PtrToStringAnsi(stringPtr)
+                                      privPtr <- IntPtr.Add(privPtr, 12)
+                                      Marshal.FreeHGlobal(stringPtr)
+                                      privString
+                                    )
+        privList
+        
