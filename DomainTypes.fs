@@ -317,6 +317,9 @@ module Fetters.DomainTypes
         pid : uint32
         service : string option}
 
+    type TokenPrivileges = {
+         privileges : string list}
+
     type UDPListener = {
         localAddress : IPAddress
         localport : uint16
@@ -331,7 +334,7 @@ module Fetters.DomainTypes
         rdpSessions : RdpSession list
         tcpConnections : TCPConnection list
         udpTraffic : UDPListener list
-    }
+        userTokenPrivileges : TokenPrivileges}
 
     type FullOutput = {
         loot : SystemSecrets

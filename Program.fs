@@ -8,4 +8,4 @@ open Fetters.dotNetFunctions
 
 
 // Testing/rework harness
-getTokenPrivInformation () |> List.iter(fun x -> printfn "privilege %s" x)
+

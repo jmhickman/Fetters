@@ -1495,28 +1495,42 @@
     //Token Privilege Enumeration
     /////////////////////////////
 
-    let getTokenPrivInformation () =
+    let getTokenPrivInformation () 
+        : TokenPrivileges =
 
         let mutable tokenInfoLength = 0
         let mutable tokenInfo = IntPtr.Zero
-        
-        GetTokenInformation(WindowsIdentity.GetCurrent().Token, TOKEN_INFORMATION_CLASS.TokenPrivileges, tokenInfo, tokenInfoLength, &tokenInfoLength) |> ignore
+        // Have to call twice, once to get the size, again to fetch real value
+        GetTokenInformation(WindowsIdentity.GetCurrent().Token, 
+                            TOKEN_INFORMATION_CLASS.TokenPrivileges, 
+                            tokenInfo, 
+                            tokenInfoLength, 
+                            &tokenInfoLength) |> ignore
         tokenInfo <- Marshal.AllocHGlobal(tokenInfoLength)
-        GetTokenInformation(WindowsIdentity.GetCurrent().Token, TOKEN_INFORMATION_CLASS.TokenPrivileges, tokenInfo, tokenInfoLength, &tokenInfoLength) |> ignore
+        GetTokenInformation(WindowsIdentity.GetCurrent().Token, 
+                            TOKEN_INFORMATION_CLASS.TokenPrivileges, 
+                            tokenInfo, 
+                            tokenInfoLength, 
+                            &tokenInfoLength) |> ignore
+        //Fetch the struct from the tokenInfo Ptr, and then advance it to ready
+        //for the rest of the calculation
         let tokenPrivs = Marshal.PtrToStructure<TOKEN_PRIVILEGES>(tokenInfo)
         let mutable privPtr = IntPtr.Add(tokenInfo, 4)
-        
+        //Setup mutable throw-aways, call twice for size then retrieve, advance
+        //ptr and retrieve string. Free the buffer, repeat.
         let privList = 
             [0..(tokenPrivs.privilegeCount - 1)]
-            |> List.map(fun count ->  let mutable cchName = 0
-                                      let mutable stringPtr = IntPtr.Zero
-                                      LookupPrivilegeName("", privPtr, stringPtr, &cchName) |> ignore
-                                      stringPtr <- Marshal.AllocHGlobal(cchName)
-                                      LookupPrivilegeName("", privPtr, stringPtr, &cchName) |> ignore
-                                      let privString =  Marshal.PtrToStringAnsi(stringPtr)
-                                      privPtr <- IntPtr.Add(privPtr, 12)
-                                      Marshal.FreeHGlobal(stringPtr)
-                                      privString
-                                    )
-        privList
+            |> List.map(fun count ->  
+                            let mutable cchName = 0
+                            let mutable stringPtr = IntPtr.Zero
+                            LookupPrivilegeName("", privPtr, stringPtr, &cchName) |> ignore
+                            stringPtr <- Marshal.AllocHGlobal(cchName)
+                            LookupPrivilegeName("", privPtr, stringPtr, &cchName) |> ignore
+                            let privString =  Marshal.PtrToStringAnsi(stringPtr)
+                            privPtr <- IntPtr.Add(privPtr, 12)
+                            Marshal.FreeHGlobal(stringPtr)
+                            privString)
+        //Pack and ship
+        let tokenPrivileges = {privileges = privList}
+        tokenPrivileges
         
