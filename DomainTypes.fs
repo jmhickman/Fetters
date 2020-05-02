@@ -148,6 +148,7 @@ module Fetters.DomainTypes
 
     type LocalGroup = {
         name : string
+        sid : string
         members : string list
     }
 
@@ -194,12 +195,12 @@ module Fetters.DomainTypes
         sharePath : string 
     }
 
-    type User = 
-        {name : string
+    type User = { 
+         name : string
          domain : string
-         sid: string}
-                
-
+         sid: string
+     }
+ 
     type SystemStaticAttributes = {
         autoruns : AutorunKey list
         environmentVars : EnvironmentVar list
@@ -351,20 +352,30 @@ module Fetters.DomainTypes
         wmiFilterList: string list
         }
 
-    type WmiSingleQuery = {
-        wmiPath: string
-        wmiQuery: WmiQueryType 
+    type WmiRawResult = {
+        rawListofList : string list list
         }
+
+    type WmiSemaphore = 
+        |SDisk
+        |SGroup
+        |SOS
+        |SUser
+    
+    type Null = Null of string
 
     type WmiRecord = 
-        | User of User 
-        | Disk of Disk
+        |Disk of Disk
+        |Group of LocalGroup
+        |OS of WindowsDetails
+        |User of User
+        |Null of Null
         
 
-    type outputRecordType = 
+    (*type outputRecordType = 
         {user: WmiRecord
          disk: WmiRecord
-        }
+        }*)
 
     ////////////////////
     // Native Call Types

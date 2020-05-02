@@ -3,39 +3,19 @@
     open System.Management
     open Fetters.DomainTypes
 
-    let localScope = String.Format
-                        ("\\\\{0}\\root\cimv2",  
-                        Environment.GetEnvironmentVariable("COMPUTERNAME"))
+    let localScope = 
+        sprintf "\\\\%s\\root\cimv2" <| Environment.GetEnvironmentVariable("COMPUTERNAME")
 
-    let connectionError = 
-        ["Error: Scope didn't connect. Check credentials or WMI path"]
-
-    let wmiUserQuery = 
-        {wmiSqlQuery = "SELECT * FROM Win32_Account where SidType=1"; 
-        wmiFilterList = ["Name";"Domain";"SID"]}
-    
-    let wmiOsQuery = 
-        {wmiSqlQuery = "SELECT * FROM Win32_OperatingSystem";
-        wmiFilterList = ["BuildNumber";"Name"]}
-
-    let wmiDiskQuery = 
-        {wmiSqlQuery = "SELECT * FROM Win32_LogicalDisk";
-        wmiFilterList = ["Name";"Size";"Filesystem"]}
-
-    let wmiGroupQuery = 
-        {wmiSqlQuery = "Select * from Win32_Group  Where LocalAccount = True"
-         wmiFilterList = ["Name";"SID";]}
-
-    /////////////////////////////////
+        /////////////////////////////////
     // WMI Management Object Creation
     /////////////////////////////////
     let private initializeManagementScope 
         (path: string)
         : ManagementScope = 
-
         let mpath = new ManagementPath(path)
         let mScope = new ManagementScope(mpath)
         mScope
+
 
     let private connectManagementScope 
         (managementScope: ManagementScope) 
@@ -45,57 +25,92 @@
         with
         | _ -> None
 
-    let private createObjectQuery query = new ObjectQuery(query)
+
+    let private createObjectQuery
+        (semaphore: WmiSemaphore)
+        : ObjectQuery = 
+        match semaphore with
+        |SDisk -> new ObjectQuery("SELECT * FROM Win32_LogicalDisk")
+        |SGroup -> new ObjectQuery("Select * from Win32_Group Where LocalAccount = True")
+        |SOS -> new ObjectQuery("SELECT * FROM Win32_OperatingSystem")
+        |SUser -> new ObjectQuery("SELECT * FROM Win32_Account where SidType=1")
+
 
     let private createObjectSearcher 
-        (objectQuery: ObjectQuery)
         (connectedScope: ManagementScope) 
+        (objectQuery: ObjectQuery)
         : ManagementObjectSearcher = 
-        
         new ManagementObjectSearcher(connectedScope, objectQuery)
         
-    // Get the results of the WMI query, and then convert to a useful output
-    // Since the wmiResults are in a strange not-collection, I have to either
-    // do this, or convert to a list with a yield anyway if I want to use
-    // nested List.map. 
-    let private generateWmiResultsList 
-            (mObjectSearcher: ManagementObjectSearcher) 
-            (wmiQueryFilters: string list) 
-            : string list list= 
+    
+    let private generateRawWMIResult
+        (semaphore: WmiSemaphore)
+        (mObjectSearcher: ManagementObjectSearcher)
+        : WmiRawResult = 
+        let filters = 
+            match semaphore with
+            |SDisk -> ["Name";"Size";"Filesystem"]
+            |SGroup -> ["Name";"SID";]
+            |SOS -> ["BuildNumber";"Name"]
+            |SUser -> ["Name";"Domain";"SID"]
+        
         let wmiResults = mObjectSearcher.Get()
-         
-        [for _r in wmiResults do
-            [for _f in wmiQueryFilters do
-                 yield (_r.[_f]).ToString()
-            ]    
-        ]
-         
-    let private getWmiSearchResults 
-        (wmiSingleQuery: WmiSingleQuery) 
-        : string list list=
-        let path = wmiSingleQuery.wmiPath
-        let {wmiSqlQuery= query; wmiFilterList= filters} = wmiSingleQuery.wmiQuery
-        let mScope = initializeManagementScope path
-        let oQuery = createObjectQuery query
-
-        // We only initialize the ObjectSearcher if the scope object connected
-        match connectManagementScope mScope with
-        | Some () -> createObjectSearcher oQuery mScope
-                     |> fun x -> generateWmiResultsList x filters
-        | None -> [connectionError]
-
+        let result = {
+            rawListofList = 
+                [for result in wmiResults do
+                    [for filter in filters do
+                        yield (result.[filter]).ToString()
+                    ]    
+                ]
+        }
+        result
+    
+    
     let private createRecord 
-        (rawObject: string list list) 
-        (outputRecordType: WmiRecord) 
+        (semaphore: WmiSemaphore)
+        (rawResult: WmiRawResult)         
         : WmiRecord list = 
-        match outputRecordType with
-        | User x -> rawObject 
-                    |> List.map(fun _l -> 
-                                User {name = _l.[0]; domain = _l.[1]; sid = _l.[2]})
-        | Disk x -> rawObject 
-                    |> List.map(fun _l -> 
-                                Disk {name = _l.[0]; size = _l.[1]; mountpoint = _l.[2]})
 
-    let queryWMI = getWmiSearchResults >> createRecord
-    // change outputRecordType to the planned semaphore instead of overloading the WmiRecord type.
-    // the signature should look like semaphore -> WmiRecord lsit
+        match semaphore with
+        |SDisk -> rawResult.rawListofList
+                  |> List.map(fun rawList -> 
+                      let disk = {
+                          name = rawList.[0]
+                          size = rawList.[1]
+                          mountpoint = rawList.[2]
+                      }
+                      disk |> WmiRecord.Disk) 
+        |SGroup -> rawResult.rawListofList
+                   |> List.map(fun rawList ->
+                        let group = {
+                            name = rawList.[0]
+                            sid = rawList.[1]
+                            members = [""]
+                        }
+                        group |> WmiRecord.Group)
+        |SOS -> rawResult.rawListofList
+                |> List.map(fun rawList ->
+                     let os = {
+                         winVer = rawList.[0]
+                         build = rawList.[1]
+                         runtimeVer = ""
+                         runtimeType= ""
+                        }
+                     os |> WmiRecord.OS)
+        |SUser -> rawResult.rawListofList
+                  |> List.map(fun rawList ->
+                      let user = {
+                          name = rawList.[0]
+                          domain = rawList.[1]
+                          sid = rawList.[2]
+                      } 
+                      user |> WmiRecord.User)
+
+
+    let queryWMI 
+        (semaphore: WmiSemaphore)
+        : WmiRecord list = 
+        initializeManagementScope localScope 
+        |> fun cs -> match connectManagementScope cs with
+                     |Some xu -> createObjectQuery semaphore |> createObjectSearcher cs |> generateRawWMIResult semaphore |> createRecord semaphore
+                     |None -> []
