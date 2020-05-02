@@ -9,9 +9,9 @@
     open Fetters.dotNetFunctions
     open Fetters.DomainTypes
 
-    /////////////////////////////
-    // DU "enums" for native code
-    /////////////////////////////
+    //////////////
+    // Union types
+    //////////////
 
     //// Arp section ////
 
@@ -131,6 +131,10 @@
         |Down
         |Init
 
+    [<Struct>]
+    type WTS_INFO_CLASS =
+        |WTSClientAddress = 14
+
     //// TCP dump Section ////
 
     [<Struct>]
@@ -194,13 +198,6 @@
         |UDP_TABLE_BASIC
         |UDP_TABLE_OWNER_PID
         |UDP_TABLE_OWNER_MODULE
-    
-    
-    //// RDP Session Section ////
-
-    [<Struct>]
-    type WTS_INFO_CLASS =
-        |WTSClientAddress = 14
 
     //// Vault section ////
     
@@ -233,9 +230,9 @@
         |AppStart = 100
         |AppEnd = 10000
 
-    //////////////////////////////
-    // Structs for the native code
-    //////////////////////////////
+    ///////////////
+    // Struct types
+    ///////////////
 
     
     //// Arp Section ////
@@ -393,6 +390,18 @@
         val mutable dnsDomainName : LSA_STRING_OUT
         val mutable upn : LSA_STRING_OUT
 
+    type KerberosRequest = 
+        |KERB_QUERY_TKT_CACHE_REQ of KERB_QUERY_TKT_CACHE_REQUEST
+        |KERB_RETRIEVE_TKT_REQ of KERB_RETRIEVE_TKT_REQUEST
+
+    type KerberosResponse = 
+        |KERB_QUERY_TKT_CACHE_RESP of KERB_QUERY_TKT_CACHE_RESPONSE
+        |KERB_RETRIEVE_TKT_RESP of KERB_RETRIEVE_TKT_RESPONSE
+
+    type KerberosTicketStruct = 
+        |KERB_EXTERNAL_TKT of KERB_EXTERNAL_TICKET
+        |KERB_TKT_CACHE_INFO of KERB_TICKET_CACHE_INFO
+
     //// RDP section ////
 
     [<Struct>]
@@ -414,18 +423,6 @@
         [<MarshalAs(UnmanagedType.ByValArray, SizeConst = 20)>]
         val mutable addressRaw : byte[]
     
-    type KerberosRequest = 
-        |KERB_QUERY_TKT_CACHE_REQ of KERB_QUERY_TKT_CACHE_REQUEST
-        |KERB_RETRIEVE_TKT_REQ of KERB_RETRIEVE_TKT_REQUEST
-
-    type KerberosResponse = 
-        |KERB_QUERY_TKT_CACHE_RESP of KERB_QUERY_TKT_CACHE_RESPONSE
-        |KERB_RETRIEVE_TKT_RESP of KERB_RETRIEVE_TKT_RESPONSE
-
-    type KerberosTicketStruct = 
-        |KERB_EXTERNAL_TKT of KERB_EXTERNAL_TICKET
-        |KERB_TKT_CACHE_INFO of KERB_TICKET_CACHE_INFO
-
     //// TCP Query Section ////
     
     [<Struct>]
@@ -558,10 +555,8 @@
     [<Struct>]
     [<StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)>]
     type VAULT_ITEM_ELEMENT =
-       //[<FieldOffset(0)>]
-       val mutable SchemaElementId : VAULT_SCHEMA_ELEMENT_ID
-       //[<FieldOffset(8)>]
-       val mutable Type : VAULT_ELEMENT_TYPE
+        val mutable SchemaElementId : VAULT_SCHEMA_ELEMENT_ID
+        val mutable Type : VAULT_ELEMENT_TYPE
 
     type VaultItem = 
         |WIN8VAULT of VAULT_ITEM_WIN8
@@ -579,28 +574,45 @@
     //// advapi32 ////
     
     [<DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)>]
-    extern bool LogonUser(string lpszUsername,
-                         string lpszDomain,
-                         string lpszPassword, 
-                         int dwLogonType, 
-                         int dwLogonProvider, 
-                         [<Out>] IntPtr& phToken)
+    extern bool LogonUser(
+        string lpszUsername,
+        string lpszDomain,
+        string lpszPassword, 
+        int dwLogonType, 
+        int dwLogonProvider, 
+        [<Out>] IntPtr& phToken
+        )
 
     [<DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)>]
-    extern bool OpenProcessToken(IntPtr processHandle, 
-                                uint32 desiredAccess, 
-                                [<Out>] IntPtr& tokenHandle)
+    extern bool OpenProcessToken(
+        IntPtr processHandle, 
+        uint32 desiredAccess, 
+        [<Out>] IntPtr& tokenHandle
+        )
 
     [<DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)>]
-    extern bool DuplicateToken(IntPtr existingTokenHandle, 
-                              int impersonationLevel, 
-                              [<Out>] IntPtr& duplicatTokenHandle)
+    extern bool DuplicateToken(
+        IntPtr existingTokenHandle, 
+        int impersonationLevel, 
+        [<Out>] IntPtr& duplicatTokenHandle
+        )
 
     [<DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)>]
-    extern bool GetTokenInformation(IntPtr TokenHandle, TOKEN_INFORMATION_CLASS TokenInformationClass, IntPtr TokenInformation, [<Out>] int TokenInformationLength, [<Out>] int32& ReturnLength)
+    extern bool GetTokenInformation(
+        IntPtr TokenHandle, 
+        TOKEN_INFORMATION_CLASS TokenInformationClass, 
+        IntPtr TokenInformation, 
+        [<Out>] int TokenInformationLength, 
+        [<Out>] int32& ReturnLength
+        )
 
     [<DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Ansi)>]
-    extern bool LookupPrivilegeName(string lpSystemName, IntPtr lpLuid, IntPtr lpName, [<Out>] int32& cchName )
+    extern bool LookupPrivilegeName(
+        string lpSystemName, 
+        IntPtr lpLuid, 
+        IntPtr lpName, 
+        [<Out>] int32& cchName 
+        )
     
     [<DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)>]
     extern bool ImpersonateLoggedOnUser(IntPtr tokenHandle)
@@ -609,7 +621,11 @@
     extern bool RevertToSelf()
 
     [<DllImport("advapi32.dll", SetLastError = true)>]
-    extern uint32 I_QueryTagInformation(IntPtr nothing, SC_SERVICE_TAG_QUERY_TYPE Type, [<In>] [<Out>] SC_SERVICE_TAG_QUERY& Query)
+    extern uint32 I_QueryTagInformation(
+        IntPtr nothing, 
+        SC_SERVICE_TAG_QUERY_TYPE Type, 
+        [<In>] [<Out>] SC_SERVICE_TAG_QUERY& Query
+        )
 
     //// iphlpapi ////
     
@@ -617,10 +633,24 @@
     extern int FreeMibTable(IntPtr plpNetTable)
 
     [<DllImport("iphlpapi.dll", SetLastError = true)>]
-    extern uint32 GetExtendedTcpTable(IntPtr pTcpTable, uint32& dwOutBufLen, bool sort, int ipVersion, TCP_TABLE_CLASS tblClass, int reserved)
+    extern uint32 GetExtendedTcpTable(
+        IntPtr pTcpTable, 
+        uint32& dwOutBufLen, 
+        bool sort, 
+        int ipVersion, 
+        TCP_TABLE_CLASS tblClass, 
+        int reserved
+        )
 
     [<DllImport("iphlpapi.dll", SetLastError = true)>]
-    extern uint32 GetExtendedUdpTable(IntPtr pUdpTable, uint32& dwOutBufLen, bool sort, int ipVersion, UDP_TABLE_CLASS tblClass, int reserved)
+    extern uint32 GetExtendedUdpTable(
+        IntPtr pUdpTable, 
+        uint32& dwOutBufLen, 
+        bool sort, 
+        int ipVersion, 
+        UDP_TABLE_CLASS tblClass, 
+        int reserved
+        )
 
     [<DllImport("iphlpapi.dll", SetLastError = true)>]
     extern int GetIpNetTable(IntPtr pIpNetTable, int& pdwSize, bool bOrder)
@@ -637,92 +667,126 @@
     
        
     [<DllImport("netapi32.dll", CharSet = CharSet.Unicode)>]
-    extern int NetLocalGroupGetMembers(string serverName, 
-                                      string localGroupName, 
-                                      int level, // 2
-                                      [<Out>] IntPtr& bufptr,
-                                      int prefmaxlen, // -1
-                                      [<Out>] int& entriesRead,
-                                      [<Out>] int& totalEntries,
-                                      [<Out>] IntPtr resumeHandle)
+    extern int NetLocalGroupGetMembers(
+        string serverName, 
+        string localGroupName, 
+        int level, // 2
+        [<Out>] IntPtr& bufptr,
+        int prefmaxlen, // -1
+        [<Out>] int& entriesRead,
+        [<Out>] int& totalEntries,
+        [<Out>] IntPtr resumeHandle
+        )
 
     //// secur32 ////
     
     [<DllImport("secur32.dll", SetLastError = true)>]
-    //unverified
     extern int LsaConnectUntrusted([<Out>] IntPtr& lsaHandle)
 
     [<DllImport("secur32.dll", SetLastError = true)>]
-    extern int LsaRegisterLogonProcess(LSA_STRING_IN& logonProcessName, 
-                                      [<Out>] IntPtr& lsaHandle, 
-                                      [<Out>] uint64& securityMode)
+    extern int LsaRegisterLogonProcess(
+        LSA_STRING_IN& logonProcessName, 
+        [<Out>] IntPtr& lsaHandle, 
+        [<Out>] uint64& securityMode
+        )
 
     [<DllImport("secur32.dll", SetLastError = true)>]
     extern int LsaDeregisterLogonProcess([<In>] IntPtr lsaHandle)
 
     [<DllImport("secur32.dll", SetLastError = true)>]
-    extern int LsaLookupAuthenticationPackage(IntPtr lsaHandle, 
-                                             LSA_STRING_IN packageName, 
-                                             [<Out>] int& authenticationPackage)
+    extern int LsaLookupAuthenticationPackage(
+        IntPtr lsaHandle, 
+        LSA_STRING_IN packageName, 
+        [<Out>] int& authenticationPackage
+        )
 
     [<DllImport("secur32.dll", EntryPoint = "LsaCallAuthenticationPackage", SetLastError = true)>]
-    extern int LsaCallAuthenticationPackage_CACHE(IntPtr lsaHandle, 
-                                                 int authenticationPackage, 
-                                                 KERB_QUERY_TKT_CACHE_REQUEST protocolSubmitBuffer, 
-                                                 int submitBufferLength, 
-                                                 [<Out>] IntPtr& protocolReturnBuffer, 
-                                                 [<Out>] int& returnBufferLength, 
-                                                 [<Out>] int protocolStatus)
+    extern int LsaCallAuthenticationPackage_CACHE(
+        IntPtr lsaHandle, 
+        int authenticationPackage, 
+        KERB_QUERY_TKT_CACHE_REQUEST protocolSubmitBuffer, 
+        int submitBufferLength, 
+        [<Out>] IntPtr& protocolReturnBuffer, 
+        [<Out>] int& returnBufferLength, 
+        [<Out>] int protocolStatus
+        )
 
     [<DllImport("secur32.dll", EntryPoint = "LsaCallAuthenticationPackage", SetLastError = true)>]
-    extern int LsaCallAuthenticationPackage_RET(IntPtr lsaHandle, 
-                                               int authenticationPackage, 
-                                               KERB_RETRIEVE_TKT_REQUEST protocolSubmitBuffer, 
-                                               int submitBufferLength, 
-                                               [<Out>] IntPtr& protocolReturnBuffer, 
-                                               [<Out>] int& returnBufferLength, 
-                                               [<Out>] int protocolStatus)
+    extern int LsaCallAuthenticationPackage_RET(
+        IntPtr lsaHandle, 
+        int authenticationPackage, 
+        KERB_RETRIEVE_TKT_REQUEST protocolSubmitBuffer, 
+        int submitBufferLength, 
+        [<Out>] IntPtr& protocolReturnBuffer, 
+        [<Out>] int& returnBufferLength, 
+        [<Out>] int protocolStatus
+        )
                                             
     [<DllImport("secur32.dll", SetLastError = true)>]
     extern uint32 LsaFreeReturnBuffer(IntPtr& buffer)
 
     [<DllImport("secur32.dll", SetLastError = true)>]
-    extern uint32 LsaEnumerateLogonSessions([<Out>] uint64& logonSessionCount, [<Out>] IntPtr& logonSessionList)
+    extern uint32 LsaEnumerateLogonSessions(
+        [<Out>] uint64& logonSessionCount, 
+        [<Out>] IntPtr& logonSessionList
+        )
 
     [<DllImport("secur32.dll", SetLastError = true)>]
     extern uint32 LsaGetLogonSessionData(IntPtr luid, [<Out>] IntPtr& ppLogonSessionData )
 
-    [<DllImport("wtsapi32.dll", SetLastError = true)>]
-    extern int WTSEnumerateSessionsEx(IntPtr hServer,
-                                     int& pLevel,
-                                     int Filter,
-                                     [<Out>] IntPtr& ppSessionInfo,
-                                     [<Out>] int& pCount)
-    
     //// vaultcli ////
 
     [<DllImport("vaultcli.dll")>]
-    extern int32 VaultOpenVault(Guid vaultGuid, uint32 offset, [<Out>] IntPtr& vaultHandle)
+    extern int32 VaultOpenVault(
+        Guid vaultGuid, 
+        uint32 offset, 
+        [<Out>] IntPtr& vaultHandle
+        )
 
     [<DllImport("vaultcli.dll")>]
-    extern int32 VaultCloseVault(IntPtr vaultHandle)
+    extern int32 VaultCloseVault(IntPtr vaultHandle) //these two need to be integrated into the vault code!
 
     [<DllImport("vaultcli.dll")>]
-    extern int32 VaultFree(IntPtr vaultHandle)
+    extern int32 VaultFree(IntPtr vaultHandle) //
 
     [<DllImport("vaultcli.dll")>]
-    extern int32 VaultEnumerateVaults(int32 offset, [<Out>] int32& vaultCount, [<Out>] IntPtr& vaultGuid)
+    extern int32 VaultEnumerateVaults(
+        int32 offset, 
+        [<Out>] int32& vaultCount, 
+        [<Out>] IntPtr& vaultGuid
+        )
 
     [<DllImport("vaultcli.dll")>]
-    extern int32 VaultEnumerateItems(IntPtr vaultHandle, int32 chunkSize, [<Out>] int32& vaultItemCount, [<Out>] IntPtr& vaultItem)
+    extern int32 VaultEnumerateItems(
+        IntPtr vaultHandle, 
+        int32 chunkSize, 
+        [<Out>] int32& vaultItemCount, 
+        [<Out>] IntPtr& vaultItem
+        )
 
     [<DllImport("vaultcli.dll", EntryPoint = "VaultGetItem")>]
-    extern int32 VaultGetItem_WIN8(IntPtr vaultHandle, Guid schemaId, IntPtr pResourceElement, IntPtr pIdentityElement, IntPtr pPackageSid, IntPtr zero, int32 arg6, [<Out>] IntPtr& passwordVaultPtr)
+    extern int32 VaultGetItem_WIN8(
+        IntPtr vaultHandle, 
+        Guid schemaId, 
+        IntPtr pResourceElement, 
+        IntPtr pIdentityElement, 
+        IntPtr pPackageSid, 
+        IntPtr zero, 
+        int32 arg6, 
+        [<Out>] IntPtr& passwordVaultPtr
+        )
 
     [<DllImport("vaultcli.dll", EntryPoint = "VaultGetItem")>]
-    extern int32 VaultGetItem_WIN7(IntPtr vaultHandle, Guid schemaId, IntPtr pResourceElement, IntPtr pIdentityElement, IntPtr zero, int32 arg5, [<Out>] IntPtr& passwordVaultPtr)
-    
-    
+    extern int32 VaultGetItem_WIN7(
+        IntPtr vaultHandle, 
+        Guid schemaId, 
+        IntPtr pResourceElement,
+        IntPtr pIdentityElement, 
+        IntPtr zero, 
+        int32 arg5, 
+        [<Out>] IntPtr& passwordVaultPtr
+        )
+            
     
     //// wtsapi32 ////
 
@@ -730,30 +794,37 @@
     extern IntPtr WTSOpenServer(string pServerName)
 
     [<DllImport("Wtsapi32.dll", SetLastError = true)>]
-    extern bool WTSQuerySessionInformation(IntPtr& hServer,
-                                          int sessionId,
-                                          WTS_INFO_CLASS wtsClientAddress,
-                                          [<Out>] IntPtr& ppBuffer,
-                                          [<Out>] int& pBytesReturned)
+    extern bool WTSQuerySessionInformation(
+        IntPtr& hServer,
+        int sessionId,
+        WTS_INFO_CLASS wtsClientAddress,
+        [<Out>] IntPtr& ppBuffer,
+        [<Out>] int& pBytesReturned
+        )
+    
+    [<DllImport("wtsapi32.dll", SetLastError = true)>]
+    extern int WTSEnumerateSessionsEx(IntPtr hServer,
+                                     int& pLevel,
+                                     int Filter,
+                                     [<Out>] IntPtr& ppSessionInfo,
+                                     [<Out>] int& pCount)
 
-    ////////////////////////
-    // Native function calls
-    ////////////////////////
     //////////////////////////
     // Native Function Helpers
     //////////////////////////
 
-    // For extracting LSA_STRING_OUT 
+    //For extracting LSA_STRING_OUT 
     let marshalLSAString
         (sourceStruct: LSA_STRING_OUT)
         : string =
         match sourceStruct with
-        | x when not(x.buffer = IntPtr.Zero) && 
-                 not(x.length = 0us) -> let unmanagedString = Marshal.PtrToStringAuto(sourceStruct.buffer, (int(sourceStruct.maxLength /2us))).Trim()
-                                        unmanagedString
+        | x when not(x.buffer = IntPtr.Zero) && not(x.length = 0us) -> 
+            let unmanagedString = Marshal.PtrToStringAuto(sourceStruct.buffer, (int(sourceStruct.maxLength /2us))).Trim()
+            unmanagedString
         |_ -> ""
 
-    // For extracting strings at an offset from a Ptr. Used in the Vault enum code
+
+    //For extracting strings at an offset from a Ptr. Used in the Vault enum code
     let marshalIndirectString
         (offset: int)
         (ptr: IntPtr)
@@ -762,8 +833,14 @@
         let strPtr = Marshal.ReadIntPtr(oPtr)
         Marshal.PtrToStringAuto(strPtr)
 
-    // Useful preset for vault code
+
+    //Useful partial for vault code
     let marshalVaultString = marshalIndirectString 16
+
+
+    ////////////////////////
+    // Native function calls
+    ////////////////////////
 
     //////////////////////////
     // RDP Session Enumeration
@@ -773,13 +850,15 @@
         (ppSessionBaseAddr: IntPtr)
         (count: int) 
         : WTS_SESSION_INFO_1[] =
-        // Helper function to pull unmanaged info into managed code 
+        //Helper function to pull unmanaged info into managed code 
         let mutable ppSBA = ppSessionBaseAddr
         //let enumSessions = Array.create count (WTS_SESSION_INFO_1())
         [|0..(count - 1)|] 
-        |> Array.map(fun c -> let wtsSessionInfo = Marshal.PtrToStructure<WTS_SESSION_INFO_1>(ppSBA)
-                              ppSBA <- IntPtr.Add(ppSBA, Marshal.SizeOf<WTS_SESSION_INFO_1>())
-                              wtsSessionInfo)
+        |> Array.map(fun c -> 
+            let wtsSessionInfo = Marshal.PtrToStructure<WTS_SESSION_INFO_1>(ppSBA)
+            ppSBA <- IntPtr.Add(ppSBA, Marshal.SizeOf<WTS_SESSION_INFO_1>())
+            wtsSessionInfo)
+
 
     let private rdpSessionGetAddress 
         (ppBuffer: IntPtr) 
@@ -789,23 +868,27 @@
         let addr = Marshal.PtrToStructure<WTS_CLIENT_ADDRESS>(ppBuffer)
         System.Net.IPAddress(addr.addressRaw.[2..5])
         
+
     let private rdpSessionReverseLookup 
         (sessionID: int) =
-        // Helper function to do a reverse IP lookup on a given Session ID
+        //Helper function to do a reverse IP lookup on a given Session ID
         let mutable server = WTSOpenServer("localhost")
         let mutable ppBuffer = IntPtr.Zero
         let mutable pBytesReturned = 0
 
         let revLookup = 
-            WTSQuerySessionInformation(&server, 
-                                       sessionID,
-                                       WTS_INFO_CLASS.WTSClientAddress, 
-                                       &ppBuffer, 
-                                       &pBytesReturned)
+            WTSQuerySessionInformation(
+                &server, 
+                sessionID,
+                WTS_INFO_CLASS.WTSClientAddress, 
+                &ppBuffer, 
+                &pBytesReturned
+            )
         
         match revLookup with
         | true -> rdpSessionGetAddress ppBuffer 
         | false -> System.Net.IPAddress.None
+
 
     let enumerateRdpSessions () =
         // Returns a RdpSession record list option of local sessions meeting the filter,
@@ -827,12 +910,14 @@
         let enumList = 
             allEnumeratedSessions 
             |> Array.filter(fun f -> f.pSessionName.StartsWith("RDP"))
-            |> Array.map(fun sess -> {state = sess.State.ToString(); 
-                                       sessionID = sess.SessionID;
-                                       sessionName = sess.pSessionName;
-                                       hostName = sess.pHostName;
-                                       username = sess.pUserName;
-                                       remoteAddress = (rdpSessionReverseLookup sess.SessionID)})
+            |> Array.map(fun sess -> 
+                {state = sess.State.ToString(); 
+                sessionID = sess.SessionID;
+                sessionName = sess.pSessionName;
+                hostName = sess.pHostName;
+                username = sess.pUserName;
+                remoteAddress = (rdpSessionReverseLookup sess.SessionID)
+                })
             |> Array.toList
 
         match enumList with
@@ -853,15 +938,16 @@
         
         [|0..(entriesRead - 1)|] 
         |> Array.map(fun c -> 
-                     let mstruct = Marshal.PtrToStructure<LOCAL_GROUP_MEMBER_INFO2>(bPtr)
-                     bPtr <- IntPtr.Add(bPtr, Marshal.SizeOf<LOCAL_GROUP_MEMBER_INFO2>())
-                     mstruct)
+            let mstruct = Marshal.PtrToStructure<LOCAL_GROUP_MEMBER_INFO2>(bPtr)
+            bPtr <- IntPtr.Add(bPtr, Marshal.SizeOf<LOCAL_GROUP_MEMBER_INFO2>())
+            mstruct)
         
 
     let getLocalGroupMembership 
-        (groupName: string) =
-        // Enumerates the members of a local group. Will emit a None on empty 
-        // groups or if there was a non-0 return code.
+        (groupName: string) 
+        : string list option =
+        //Enumerates the members of a local group. Will emit a None on empty 
+        //groups or if there was a non-0 return code.
         let mutable bufPtr = IntPtr.Zero
         let mutable rHandle = IntPtr.Zero
         let mutable entRead = 0
@@ -870,7 +956,7 @@
         let returnValue = 
             NetLocalGroupGetMembers("", groupName, 2, &bufPtr, -1, &entRead, &totEntries, rHandle)
         
-        // kinda awkward, but we don't deal with errors at this point.
+        //Kinda awkward, but we don't deal with errors at this point.
         let members = 
             match returnValue with
             | 0 -> populateGroupMemberStruct bufPtr entRead
@@ -883,7 +969,7 @@
             |> Array.filter(fun gmember -> not (gmember.lgrmi2_sid = IntPtr.Zero))
             |> Array.map(fun gmember -> gmember.lgrmi2_domainandname) 
             |> Array.toList 
-        // None means there was an error in the NLGGM call, or the group doesn't exist. 
+        //None means there was an error in the NLGGM call, or the group doesn't exist. 
         match groupMemberList with
         | x when groupMemberList.Length > 0 -> Some groupMemberList
         | _ -> None
@@ -893,34 +979,38 @@
     ////////////////
 
     let private impersonateSystem () = 
-        // finds, opens and duplicates a SYSTEM process, performs the impersonation, then drops
-        // the handles. Blows up dramatically if user isn't in the Administrator role.
-        // This should probably return a Result< >, but I don't understand how to do those yet.
+        //Finds, opens and duplicates a SYSTEM process, performs the 
+        //impersonation, then closes the handles. Blows up dramatically if user 
+        //isn't in the Administrator role. This should probably return a 
+        //Result< >, but I don't understand how to do those yet.
         let mutable procHandle = IntPtr.Zero
-        let mutable dupToken = IntPtr.Zero
+        let mutable  dupToken = IntPtr.Zero
         
         let sysProcess = 
             Process.GetProcessesByName("winlogon")
             |> Array.head
-        let result = 
+        let impersonationResult = 
             match (OpenProcessToken(sysProcess.Handle, 0x0002u, &procHandle) &&
                    DuplicateToken(procHandle, 2, &dupToken) &&
-                   ImpersonateLoggedOnUser(dupToken)) with
+                   ImpersonateLoggedOnUser(dupToken)) 
+                   with
             |true -> sprintf "Impersonating %s" <| WindowsIdentity.GetCurrent().Name
             |false -> sprintf "Failed to impersonate SYSTEM, error: %i" 
-                              <| Marshal.GetLastWin32Error()
+                      <| Marshal.GetLastWin32Error()
 
         CloseHandle(dupToken) |> ignore
         CloseHandle(procHandle) |> ignore
-        result
+        impersonationResult
         
+
     let revertToSelf () = 
         match RevertToSelf() with
         |true -> true
         |false -> false
 
+
     let getSystem () = 
-        // Impersonate the NTAUTHORITY\SYSTEM user for the purposes of high integrity actions.
+        //Impersonate the NTAUTHORITY\SYSTEM user for the purposes of high integrity actions.
         match (getCurrentRole WindowsBuiltInRole.Administrator) with
         | true -> impersonateSystem ()
         | false -> sprintf "Current role cannot escalate privileges"
@@ -929,30 +1019,41 @@
     // LSA Methods (for Kerberos)
     /////////////////////////////
 
-    let private registerLsaLogonProcess () : LsaProcessHandle =
-        // We use the LsaProcessHandle later in the important call to LsaCallAuthenticationPackage
+    let private registerLsaLogonProcess () 
+        : LsaProcessHandle =
+        //We use the LsaProcessHandle later in the important call to LsaCallAuthenticationPackage
         let mutable lsaProcessHandle = IntPtr.Zero
         let mutable securityMode = 0UL
         let registeredProcessName = "SomethingCustom"
 
         let mutable configString = 
-            LSA_STRING_IN(length = uint16(registeredProcessName.Length), 
-                          maxLength = uint16(registeredProcessName.Length + 1), 
-                          buffer = registeredProcessName)
+            LSA_STRING_IN(
+                length = uint16(registeredProcessName.Length), 
+                maxLength = uint16(registeredProcessName.Length + 1), 
+                buffer = registeredProcessName
+            )
 
         LsaRegisterLogonProcess(&configString, &lsaProcessHandle, &securityMode) |> ignore
         lsaProcessHandle |> LsaProcessHandle
 
-    let private deregisterLsaLogonProcess (lsaHandle: LsaProcessHandle) =
+
+    let private deregisterLsaLogonProcess 
+        (lsaHandle: LsaProcessHandle) 
+        : unit =
         let mutable (LsaProcessHandle lHandle) = lsaHandle
         LsaDeregisterLogonProcess(lHandle) |> ignore
 
-    let private untrustedLsaConnection () : LsaProcessHandle =
+
+    let private untrustedLsaConnection () 
+        : LsaProcessHandle =
         let mutable lsaHandle = IntPtr.Zero
         LsaConnectUntrusted(&lsaHandle) |> ignore
         lsaHandle |> LsaProcessHandle
 
-    let private closeLsaHandle (handle: LsaProcessHandle) = 
+
+    let private closeLsaHandle 
+        (handle: LsaProcessHandle) 
+        : unit = 
         let mutable (LsaProcessHandle _handle) = handle
         LsaFreeReturnBuffer(&_handle) |> ignore
 
@@ -961,37 +1062,42 @@
         let mutable ptr = ptr
         LsaFreeReturnBuffer(&ptr) |> ignore
 
-    let private enumerateLsaLogonSessions () : (uint64 * LUIDPtr) =
-        // Doesn't use the LsaProcessHandle, but requires SYSTEM token or equal privs
+    let private enumerateLsaLogonSessions () 
+        : (uint64 * LUIDPtr) =
+
         let mutable countOfLUIDs = 0UL
         let mutable luidPtr = IntPtr.Zero
 
-        let ntstatus = LsaEnumerateLogonSessions(&countOfLUIDs, &luidPtr)
-        printfn "%i" ntstatus
+        LsaEnumerateLogonSessions(&countOfLUIDs, &luidPtr) |> ignore
         (countOfLUIDs, luidPtr |> LUIDPtr)
+
 
     let private getLsaSessionData 
         (count: uint64, luidPtr: LUIDPtr)
         : SECURITY_LOGON_SESSION_DATA list =
-        // Returns a filtered list of SECURITY_LOGON_SESSION_DATA structs. Seatbelt only processed
-        // results with a pSID, so that's what we're doing. I don't know what the Some/None on this
-        // should be, so I'm leaving it out for now.
+        //Returns a filtered list of SECURITY_LOGON_SESSION_DATA structs. 
+        //Seatbelt only processed results with a non-null pSID, so that's what
+        //we're doing. Will deal with Results/error states later.
         let mutable sessionDataPtr = IntPtr.Zero
         let mutable (LUIDPtr _luidPtr) = luidPtr
         let sessionData = 
             [|1..int(count)|]
-            |> Array.map(fun x -> 
-                         LsaGetLogonSessionData(_luidPtr, &sessionDataPtr) |> ignore
-                         let sessionData = Marshal.PtrToStructure<SECURITY_LOGON_SESSION_DATA>(sessionDataPtr)
-                         _luidPtr <- IntPtr.Add(_luidPtr, Marshal.SizeOf<LUID>())
-                         closeLsaH sessionDataPtr
-                         sessionData)
+            |> Array.map(fun count -> 
+                LsaGetLogonSessionData(_luidPtr, &sessionDataPtr) |> ignore
+                let sessionData = Marshal.PtrToStructure<SECURITY_LOGON_SESSION_DATA>(sessionDataPtr)
+                _luidPtr <- IntPtr.Add(_luidPtr, Marshal.SizeOf<LUID>())
+                closeLsaH sessionDataPtr
+                sessionData
+                )
              |> Array.filter(fun _s -> not(_s.pSID = IntPtr.Zero)) // We only want results where there is a pSID
              |> Array.toList
         
         closeLsaHandle (_luidPtr |> LsaProcessHandle)
         sessionData
+    
+    
     let private fetchLsaSessions = enumerateLsaLogonSessions >> getLsaSessionData
+
 
     let private lookupLsaAuthenticationPackage 
         (lsaHandle: LsaProcessHandle) 
@@ -1006,12 +1112,13 @@
         LsaLookupAuthenticationPackage(lsaHandle, lsaKerberosString, &authPkg) |> ignore
         authPkg |> LsaAuthPackage
 
+    
     let private getKerberosTicketResponse
         (lsaHandle: LsaProcessHandle) 
         (aPkg: LsaAuthPackage)
         (kerbReq: KerberosRequest)
         : (IntPtr * KerberosResponse) option = 
-        // Returns a KERB response, depending on the type of KERB request submitted
+        //Returns a KERB response, depending on the type of KERB request submitted
         let mutable ticketPtr = IntPtr.Zero
         let mutable returnBufferLength = 0
         let mutable protocolStatus = 0
@@ -1022,146 +1129,168 @@
         match kerbReq with
         |KERB_QUERY_TKT_CACHE_REQ kReq -> 
             let mutable _kReq = kReq
-            LsaCallAuthenticationPackage_CACHE(lsaHandle, 
-                                               aPkg, 
-                                               _kReq, 
-                                               Marshal.SizeOf(_kReq),
-                                               &ticketPtr,
-                                               &returnBufferLength,
-                                               protocolStatus) |> ignore
+            LsaCallAuthenticationPackage_CACHE(
+                lsaHandle, 
+                aPkg, 
+                _kReq, 
+                Marshal.SizeOf(_kReq),
+                &ticketPtr,
+                &returnBufferLength,
+                protocolStatus
+                ) |> ignore
+
             match returnBufferLength with
-            |x when x > 0 -> let kR = Marshal.PtrToStructure<KERB_QUERY_TKT_CACHE_RESPONSE>(ticketPtr)
-                             match kR.countOfTickets with
-                             | x when x > 0 -> Some (ticketPtr, kR |> KERB_QUERY_TKT_CACHE_RESP)
-                             | _ -> None
+            |x when x > 0 -> 
+                let kR = Marshal.PtrToStructure<KERB_QUERY_TKT_CACHE_RESPONSE>(ticketPtr)
+                
+                match kR.countOfTickets with
+                | x when x > 0 -> Some (ticketPtr, kR |> KERB_QUERY_TKT_CACHE_RESP)
+                | _ -> None
             | _ -> None
 
         |KERB_RETRIEVE_TKT_REQ kReq -> 
             let mutable _kReq = kReq
-            LsaCallAuthenticationPackage_RET(lsaHandle, 
-                                             aPkg, 
-                                             _kReq, 
-                                             Marshal.SizeOf(_kReq),
-                                             &ticketPtr,
-                                             &returnBufferLength,
-                                             protocolStatus) |> ignore
+            LsaCallAuthenticationPackage_RET(
+                lsaHandle, 
+                aPkg, 
+                _kReq, 
+                Marshal.SizeOf(_kReq),
+                &ticketPtr,
+                &returnBufferLength,
+                protocolStatus
+                ) |> ignore
+            
             match returnBufferLength with
-            | x when x > 0 -> Some (ticketPtr, Marshal.PtrToStructure<KERB_RETRIEVE_TKT_RESPONSE>(ticketPtr) 
-                              |> KERB_RETRIEVE_TKT_RESP)
+            | x when x > 0 -> 
+                Some (ticketPtr, Marshal.PtrToStructure<KERB_RETRIEVE_TKT_RESPONSE>(ticketPtr) 
+                |> KERB_RETRIEVE_TKT_RESP)
             | _ -> None
                                         
+    
     let private extractKerberosReponseTickets
         (ticketPtr: IntPtr, kResponse: KerberosResponse)
         : KerberosTicketStruct list =
-        // Takes in either type of response struct, and outputs a list we can work with
+        //Takes in either type of response struct, and outputs a list we can work with
         match kResponse with
         |KERB_QUERY_TKT_CACHE_RESP ticket -> 
             [0..(ticket.countOfTickets - 1)] 
             |> List.map(fun count -> 
-                        Marshal.PtrToStructure<KERB_TICKET_CACHE_INFO>(IntPtr.Add(ticketPtr, (8+ (count * 64)))) 
-                        |> KERB_TKT_CACHE_INFO)
+                Marshal.PtrToStructure<KERB_TICKET_CACHE_INFO>(IntPtr.Add(ticketPtr, (8+ (count * 64)))) 
+                |> KERB_TKT_CACHE_INFO)
         |KERB_RETRIEVE_TKT_RESP x -> 
-                        [Marshal.PtrToStructure<KERB_EXTERNAL_TICKET>(ticketPtr) |> KERB_EXTERNAL_TKT] 
+            [Marshal.PtrToStructure<KERB_EXTERNAL_TICKET>(ticketPtr) |> KERB_EXTERNAL_TKT] 
 
+    
     let private createKerberosQueryTicket
         (ticket: KERB_TICKET_CACHE_INFO)
         : KerberosQueryTicket =
         let flags = Microsoft.FSharp.Core.LanguagePrimitives.EnumOfValue<uint32, Fetters.DomainTypes.KERB_TICKET_FLAGS>(ticket.ticketFlags)
-        let kerbTicket = {serverName = marshalLSAString ticket.serverName
-                          realm = marshalLSAString ticket.realmName
-                          startTime = DateTime.FromFileTime(ticket.startTime)
-                          endTime = DateTime.FromFileTime(ticket.endTime)
-                          renewTime = DateTime.FromFileTime(ticket.renewTime)
-                          encryptionType = KERB_ENCRYPTION_TYPE.GetName(typeof<KERB_ENCRYPTION_TYPE>, ticket.encryptionType)
-                          ticketFlags = flags}
+        let kerbTicket = {
+            serverName = marshalLSAString ticket.serverName
+            realm = marshalLSAString ticket.realmName
+            startTime = DateTime.FromFileTime(ticket.startTime)
+            endTime = DateTime.FromFileTime(ticket.endTime)
+            renewTime = DateTime.FromFileTime(ticket.renewTime)
+            encryptionType = KERB_ENCRYPTION_TYPE.GetName(typeof<KERB_ENCRYPTION_TYPE>, ticket.encryptionType)
+            ticketFlags = flags
+        }
         kerbTicket
 
+   
     let private createKerberosRetrieveTicket
         (ticket: KERB_EXTERNAL_TICKET)
         : KerberosRetrieveTicket =
-        
+        //Extracting values from the easier to wrangle struct members
         let serviceTkt = Marshal.PtrToStructure<KERB_EXTERNAL_NAME>(ticket.ServiceName)
         //let targetTkt = Marshal.PtrToStructure<KERB_EXTERNAL_NAME>(ticket.TargetName) caused NullReference Exceptions on 2012 box.
         let clientTkt = Marshal.PtrToStructure<KERB_EXTERNAL_NAME>(ticket.ClientName)
         let serviceName = marshalLSAString serviceTkt.names
         let targetName = ""//marshalLSAString targetTkt.names
         let clientName = marshalLSAString clientTkt.names
-
         let flags = Microsoft.FSharp.Core.LanguagePrimitives.EnumOfValue<uint32, KERB_TICKET_FLAGS>(ticket.Flags)
-        // Have to create some b64Strings here before packing the record
+        
+        //Have to create some base64 strings here before packing the record
         let rawSessionKey = Array.create (ticket.SessionKey.length) 0uy
         Marshal.Copy(ticket.SessionKey.value, rawSessionKey, 0, ticket.SessionKey.length)
         let b64SessionKey = Convert.ToBase64String(rawSessionKey)
-
         let rawEncodedTicket = Array.create (ticket.EncodedTicketSize) 0uy
         Marshal.Copy(ticket.EncodedTicket, rawEncodedTicket, 0, ticket.EncodedTicketSize)
         let b64Ticket = Convert.ToBase64String(rawEncodedTicket)
 
-        let kerbTicket = {serviceName = serviceName
-                          target = targetName
-                          client = clientName
-                          domain = marshalLSAString ticket.DomainName
-                          targetDomain = marshalLSAString ticket.TargetDomainName
-                          altTargetDomain = marshalLSAString ticket.AltTargetDomainName
-                          sessionKeyType = KERB_ENCRYPTION_TYPE.GetName(typeof<KERB_ENCRYPTION_TYPE>, ticket.SessionKey.keyType)
-                          base64SessionKey = b64SessionKey
-                          keyExpiry = DateTime.FromFileTime(ticket.KeyExpirationTime)
-                          flags = flags
-                          startTime = DateTime.FromFileTime(ticket.StartTime)
-                          endTime = DateTime.FromFileTime(ticket.EndTime)
-                          renewTime = DateTime.FromFileTime(ticket.RenewUntil)
-                          skewTime = DateTime.FromFileTime(ticket.TimeSkew)
-                          encodedSize = ticket.EncodedTicketSize
-                          base64EncodedTicket = b64Ticket}
+        let kerbTicket = {
+            serviceName = serviceName
+            target = targetName
+            client = clientName
+            domain = marshalLSAString ticket.DomainName
+            targetDomain = marshalLSAString ticket.TargetDomainName
+            altTargetDomain = marshalLSAString ticket.AltTargetDomainName
+            sessionKeyType = KERB_ENCRYPTION_TYPE.GetName(typeof<KERB_ENCRYPTION_TYPE>, ticket.SessionKey.keyType)
+            base64SessionKey = b64SessionKey
+            keyExpiry = DateTime.FromFileTime(ticket.KeyExpirationTime)
+            flags = flags
+            startTime = DateTime.FromFileTime(ticket.StartTime)
+            endTime = DateTime.FromFileTime(ticket.EndTime)
+            renewTime = DateTime.FromFileTime(ticket.RenewUntil)
+            skewTime = DateTime.FromFileTime(ticket.TimeSkew)
+            encodedSize = ticket.EncodedTicketSize
+            base64EncodedTicket = b64Ticket
+        }
         kerbTicket
         
+
     let private createDomainSessionRecord 
         (sess: SECURITY_LOGON_SESSION_DATA, 
          kQRecords: KerberosTicket list, 
          kRRecords: KerberosTicket list)
         : DomainSession =
+        //A bodge to deal with the fact that both high and low priv codepaths  
+        //run through this function, and low priv enum can't get session info
+        //So a dummy value 'Everyone' SID is placed here.
         let SID = 
              match getCurrentRole WindowsBuiltInRole.Administrator with
              |true -> SecurityIdentifier(sess.pSID)
              |false -> SecurityIdentifier("S-1-1-0")
                      
-
-        let dsession = {username = marshalLSAString sess.username
-                        domain = marshalLSAString sess.loginDomain
-                        logonID = sess.loginID.lower
-                        userSID = SID
-                        authenticationPkg = marshalLSAString sess.authenticationPackage
-                        logonType = sess.logonType.ToString()
-                        loginTime = DateTime.FromFileTime(int64(sess.loginTime))
-                        logonServer = marshalLSAString sess.logonServer
-                        logonServerDnsDomain = marshalLSAString sess.dnsDomainName
-                        userPrincipalName = marshalLSAString sess.upn
-                        kerberosCachedTickets = kQRecords
-                        kerberosTGTcontents = kRRecords}
+        let dsession = {
+            username = marshalLSAString sess.username
+            domain = marshalLSAString sess.loginDomain
+            logonID = sess.loginID.lower
+            userSID = SID
+            authenticationPkg = marshalLSAString sess.authenticationPackage
+            logonType = sess.logonType.ToString()
+            loginTime = DateTime.FromFileTime(int64(sess.loginTime))
+            logonServer = marshalLSAString sess.logonServer
+            logonServerDnsDomain = marshalLSAString sess.dnsDomainName
+            userPrincipalName = marshalLSAString sess.upn
+            kerberosCachedTickets = kQRecords
+            kerberosTGTcontents = kRRecords
+        }
         dsession
 
     let private createKerberosRecordList
         (ticketList: KerberosTicketStruct list)
         : KerberosTicket list =
-        // Returns a list of Ticket records.
+        //Returns a list of Ticket records.
         ticketList 
         |> List.map(fun ticket ->   
-                    match ticket with
-                    |KERB_EXTERNAL_TKT tkt -> 
-                        createKerberosRetrieveTicket tkt |> KerberosRetrieveTicket
-                    |KERB_TKT_CACHE_INFO tkt -> 
-                        createKerberosQueryTicket tkt |> KerberosQueryTicket)
+            match ticket with
+            |KERB_EXTERNAL_TKT tkt -> 
+                createKerberosRetrieveTicket tkt |> KerberosRetrieveTicket
+            |KERB_TKT_CACHE_INFO tkt -> 
+                createKerberosQueryTicket tkt |> KerberosQueryTicket
+            )
 
     let enumerateDomainSessions ()
         : DomainSession list =
         // Emits a DomainSession for each enumerated session, containing KerberosTickets as well
         // as other metadata.
         let LSAStringQuery = 
-            LSA_STRING_IN(length = uint16("kerberos".Length), 
-                          maxLength = uint16("kerberos".Length + 1), 
-                          buffer = "kerberos")
+            LSA_STRING_IN(
+                length = uint16("kerberos".Length), 
+                maxLength = uint16("kerberos".Length + 1), 
+                buffer = "kerberos"
+            )
         
-        // Handle error cases. How best to do it...?
         
         let tTuple = 
             match getCurrentRole WindowsBuiltInRole.Administrator with
@@ -1173,13 +1302,13 @@
                          sessionList
                          |> List.map(fun session -> session.loginID.lower, session.loginID.upper)
                      sessionList, luidList, lsaAuthPackage, lsaHandle
-
+            //More bodge to deal with high and low priv split
             |false -> let lsaHandle = untrustedLsaConnection ()
                       let lsaAuthPackage = lookupLsaAuthenticationPackage lsaHandle LSAStringQuery
                       let sessionList = [SECURITY_LOGON_SESSION_DATA()]
                       let luidList = [0u,0]
                       sessionList, luidList, lsaAuthPackage, lsaHandle
-        
+        //Just tuple things
         let sessionList, luidList, lsaAuthPackage, lsaHandle =
             match tTuple with
             |w, x, y, z -> w, x, y, z
@@ -1187,41 +1316,39 @@
         let domainSessionRecord =
             (sessionList, luidList)
             ||>List.map2(fun sess luid -> 
-                          let _luid = LUID(lower= fst luid, upper = snd luid)
-                          (sess, 
-                           KERB_QUERY_TKT_CACHE_REQUEST
-                            (messageType = KERB_PROTOCOL_MESSAGE_TYPE.KerbQueryTicketCacheMessage,
-                             logonID = _luid ) |> KERB_QUERY_TKT_CACHE_REQ,
-                           KERB_RETRIEVE_TKT_REQUEST
-                            (messageType = KERB_PROTOCOL_MESSAGE_TYPE.KerbRetrieveTicketMessage,
-                             logonID = _luid) |> KERB_RETRIEVE_TKT_REQ) )
-
+                let _luid = LUID(lower= fst luid, upper = snd luid)
+                let kQTCR = KERB_QUERY_TKT_CACHE_REQUEST (messageType = KERB_PROTOCOL_MESSAGE_TYPE.KerbQueryTicketCacheMessage,
+                                                          logonID = _luid ) 
+                            |> KERB_QUERY_TKT_CACHE_REQ
+                let kRTR = KERB_RETRIEVE_TKT_REQUEST (messageType = KERB_PROTOCOL_MESSAGE_TYPE.KerbRetrieveTicketMessage,
+                                                      logonID = _luid) 
+                            |> KERB_RETRIEVE_TKT_REQ
+                (sess, kQTCR, kRTR)) 
             |>List.map(fun sessiontuple -> 
-                        match sessiontuple with
-                        |sess, kCReq,kRReq -> 
-                            let kCacheResp = getKerberosTicketResponse lsaHandle lsaAuthPackage kCReq
-                            let kRetResp = getKerberosTicketResponse lsaHandle lsaAuthPackage kRReq
-                            (sess, kCacheResp, kRetResp))
-
+                match sessiontuple with
+                |sess, kCReq,kRReq -> 
+                    let kCacheResp = getKerberosTicketResponse lsaHandle lsaAuthPackage kCReq
+                    let kRetResp = getKerberosTicketResponse lsaHandle lsaAuthPackage kRReq
+                    (sess, kCacheResp, kRetResp))
             |>List.map(fun sessiontuple -> 
-                       match sessiontuple with
-                       |sess, Some kCReq, Some kRetReq -> 
-                            let KQTickStruct = extractKerberosReponseTickets kCReq
-                            let KRTickStruct = extractKerberosReponseTickets kRetReq
-                            (sess,KQTickStruct,KRTickStruct)
-                       |sess, Some kCReq, None -> 
-                            let KQTickStruct = extractKerberosReponseTickets kCReq
-                            (sess,KQTickStruct,[])
-                       |sess, None, Some toss -> (sess, [], []) //Should never end up here
-                       |sess, None, None -> (sess, [], []))
-
+                match sessiontuple with
+                |sess, Some kCReq, Some kRetReq -> 
+                    let KQTickStruct = extractKerberosReponseTickets kCReq
+                    let KRTickStruct = extractKerberosReponseTickets kRetReq
+                    (sess,KQTickStruct,KRTickStruct)
+                
+                |sess, Some kCReq, None -> 
+                    let KQTickStruct = extractKerberosReponseTickets kCReq
+                    (sess,KQTickStruct,[])
+                
+                |sess, None, Some toss -> (sess, [], []) //Should never end up here
+                |sess, None, None -> (sess, [], []))
             |>List.map(fun sessiontuple ->  
-                       match sessiontuple with
-                       |sess, kQTickStruct, kExtStruct -> 
-                            let kQRecords = createKerberosRecordList kQTickStruct
-                            let kRRecords = createKerberosRecordList kExtStruct
-                            (sess,kQRecords,kRRecords))
-            
+                match sessiontuple with
+                |sess, kQTickStruct, kExtStruct -> 
+                    let kQRecords = createKerberosRecordList kQTickStruct
+                    let kRRecords = createKerberosRecordList kExtStruct
+                    (sess,kQRecords,kRRecords))
             |>List.map createDomainSessionRecord
 
         //Cleanup and then pass out result
@@ -1238,8 +1365,7 @@
         let mutable countOfVaults = 0
         let mutable vaultGuid = IntPtr.Zero
 
-        let retcode = VaultEnumerateVaults(0, &countOfVaults, &vaultGuid)
-        //vaultGuid |> VaultGuid
+        VaultEnumerateVaults(0, &countOfVaults, &vaultGuid) |> ignore
         (countOfVaults, vaultGuid |> VaultGuid)
         
 
@@ -1249,11 +1375,13 @@
         let  mutable (VaultGuid vaultGuidPtr) = vaultGuid
         let mutable vaultHandle = IntPtr.Zero
         [0..(count - 1)]
-        |> List.map(fun x -> let mutable vaultGUID = Marshal.PtrToStructure<Guid>(vaultGuidPtr)
-                             let mutable vaultHandle = IntPtr.Zero
-                             VaultOpenVault(vaultGUID, 0u, &vaultHandle) |> ignore
-                             vaultGuidPtr <- IntPtr.Add(vaultGuidPtr, Marshal.SizeOf<Guid>())
-                             vaultHandle|> VaultHandle)
+        |> List.map(fun x -> 
+            let mutable vaultGUID = Marshal.PtrToStructure<Guid>(vaultGuidPtr)
+            let mutable vaultHandle = IntPtr.Zero
+            VaultOpenVault(vaultGUID, 0u, &vaultHandle) |> ignore
+            vaultGuidPtr <- IntPtr.Add(vaultGuidPtr, Marshal.SizeOf<Guid>())
+            vaultHandle|> VaultHandle)
+
 
     let enumerateVaultItems 
         (vaultHandle: VaultHandle) 
@@ -1266,20 +1394,21 @@
         let vaultItems =
             [0..(vaultItemCount - 1)]
             |> List.map(fun x -> 
-                            match Environment.OSVersion.Version.Build with
-                            | x when x > 7601 ->  let vaultStruct = Marshal.PtrToStructure<VAULT_ITEM_WIN8>(vaultItem)
-                                                  vaultItem <- IntPtr.Add(vaultItem, Marshal.SizeOf<VAULT_ITEM_WIN8>())
-                                                  vaultStruct |> WIN8VAULT
-                            | _ -> let vaultStruct = Marshal.PtrToStructure<VAULT_ITEM_WIN7>(vaultItem)
-                                   vaultItem <- IntPtr.Add(vaultItem, Marshal.SizeOf<VAULT_ITEM_WIN7>())
-                                   vaultStruct |> WIN7VAULT)
-                                 
+                match Environment.OSVersion.Version.Build with
+                | x when x > 7601 -> 
+                    let vaultStruct = Marshal.PtrToStructure<VAULT_ITEM_WIN8>(vaultItem)
+                    vaultItem <- IntPtr.Add(vaultItem, Marshal.SizeOf<VAULT_ITEM_WIN8>())
+                    vaultStruct |> WIN8VAULT
+                | _ -> 
+                    let vaultStruct = Marshal.PtrToStructure<VAULT_ITEM_WIN7>(vaultItem)
+                    vaultItem <- IntPtr.Add(vaultItem, Marshal.SizeOf<VAULT_ITEM_WIN7>())
+                    vaultStruct |> WIN7VAULT)
         (vaultHandle |> VaultHandle, vaultItems)
 
+    
     let getVaultElementContent
         (element: IntPtr)
         : string option =
-            
         match element with
         |x when not(x = IntPtr.Zero) ->
             let elementStruct = Marshal.PtrToStructure<VAULT_ITEM_ELEMENT>(element)
@@ -1301,50 +1430,58 @@
 
         vaultItems
         |> List.map(fun vItem -> 
-                        match vItem with
-                        |WIN8VAULT vItem ->
-                            let mutable passwordPtr = IntPtr.Zero
-                            VaultGetItem_WIN8(vaultHandle, 
-                                              vItem.SchemaId, 
-                                              vItem.pResourceElement,
-                                              vItem.pIdentityElement,
-                                              vItem.pPackageSid,
-                                              IntPtr.Zero,
-                                              0,
-                                              &passwordPtr) |> ignore
-                            (vItem |> WIN8VAULT, passwordPtr)
-                        |WIN7VAULT vItem -> 
-                            let mutable passwordPtr = IntPtr.Zero
-                            VaultGetItem_WIN7(vaultHandle,
-                                              vItem.SchemaId,
-                                              vItem.pResourceElement,
-                                              vItem.pIdentityElement,
-                                              IntPtr.Zero,
-                                              0,
-                                              &passwordPtr) |> ignore
-                            (vItem |> WIN7VAULT, passwordPtr))
+            match vItem with
+            |WIN8VAULT vItem ->
+                let mutable passwordPtr = IntPtr.Zero
+                VaultGetItem_WIN8(
+                    vaultHandle, 
+                    vItem.SchemaId, 
+                    vItem.pResourceElement,
+                    vItem.pIdentityElement,
+                    vItem.pPackageSid,
+                    IntPtr.Zero,
+                    0,
+                    &passwordPtr
+                ) |> ignore
+                (vItem |> WIN8VAULT, passwordPtr)
+            |WIN7VAULT vItem -> 
+                let mutable passwordPtr = IntPtr.Zero
+                VaultGetItem_WIN7(
+                    vaultHandle,
+                    vItem.SchemaId,
+                    vItem.pResourceElement,
+                    vItem.pIdentityElement,
+                    IntPtr.Zero,
+                    0,
+                    &passwordPtr
+                ) |> ignore
+                (vItem |> WIN7VAULT, passwordPtr))
                                     
         |>List.map(fun tuple -> 
-                        let vItem, passwordPtr = tuple
-                        match vItem with
-                        | WIN8VAULT vItem -> 
-                            let mutable passwordVaultItem = Marshal.PtrToStructure<VAULT_ITEM_WIN8>(passwordPtr)
-                            let vaultRecord = {name = Marshal.PtrToStringAuto(vItem.pszCredentialFriendlyName)
-                                               resource = getVaultElementContent vItem.pResourceElement
-                                               identity = getVaultElementContent vItem.pIdentityElement
-                                               packageSid = getVaultElementContent vItem.pPackageSid
-                                               credential = getVaultElementContent passwordVaultItem.pAuthenticatorElement
-                                               lastModified = DateTime.FromFileTime(int64(vItem.LastModified))}
-                            vaultRecord
-                        |WIN7VAULT vItem -> 
-                            let mutable passwordVaultItem = Marshal.PtrToStructure<VAULT_ITEM_WIN7>(passwordPtr)
-                            let vaultRecord = {name = Marshal.PtrToStringAuto(vItem.pszCredentialFriendlyName)
-                                               resource = getVaultElementContent vItem.pResourceElement
-                                               identity = getVaultElementContent vItem.pIdentityElement
-                                               packageSid = None
-                                               credential = getVaultElementContent passwordVaultItem.pAuthenticatorElement
-                                               lastModified = DateTime.FromFileTime(int64(vItem.LastModified))}
-                            vaultRecord)
+            let vItem, passwordPtr = tuple
+            match vItem with
+            | WIN8VAULT vItem -> 
+                let mutable passwordVaultItem = Marshal.PtrToStructure<VAULT_ITEM_WIN8>(passwordPtr)
+                let vaultRecord = {
+                    name = Marshal.PtrToStringAuto(vItem.pszCredentialFriendlyName)
+                    resource = getVaultElementContent vItem.pResourceElement
+                    identity = getVaultElementContent vItem.pIdentityElement
+                    packageSid = getVaultElementContent vItem.pPackageSid
+                    credential = getVaultElementContent passwordVaultItem.pAuthenticatorElement
+                    lastModified = DateTime.FromFileTime(int64(vItem.LastModified))
+                    }
+                vaultRecord
+            |WIN7VAULT vItem -> 
+                let mutable passwordVaultItem = Marshal.PtrToStructure<VAULT_ITEM_WIN7>(passwordPtr)
+                let vaultRecord = {
+                    name = Marshal.PtrToStringAuto(vItem.pszCredentialFriendlyName)
+                    resource = getVaultElementContent vItem.pResourceElement
+                    identity = getVaultElementContent vItem.pIdentityElement
+                    packageSid = None
+                    credential = getVaultElementContent passwordVaultItem.pAuthenticatorElement
+                    lastModified = DateTime.FromFileTime(int64(vItem.LastModified))
+                    }
+                vaultRecord)
 
     ////////////////////////////
     //TCP Connection Enumeration
@@ -1360,6 +1497,7 @@
         match retcode with
         | x when x = 0u ->  Marshal.PtrToStringAuto(serviceTagQuery.buffer) |> Some
         | _ -> None
+
 
     let getTcpTable () : IntPtr option = 
         let mutable tableBufferSize = 0u
@@ -1386,9 +1524,9 @@
                 let mutable rowPtr = IntPtr.Add(tPtr, Marshal.SizeOf<MIB_TCPTABLE_OWNER_MODULE>())
                 [0u..(tcpTable.numEntries - 1u)]
                 |> List.map(fun x -> 
-                                let rowStruct = Marshal.PtrToStructure<MIB_TCPROW_OWNER_MODULE>(rowPtr)
-                                rowPtr <- IntPtr.Add(rowPtr, Marshal.SizeOf<MIB_TCPROW_OWNER_MODULE>())
-                                rowStruct)
+                    let rowStruct = Marshal.PtrToStructure<MIB_TCPROW_OWNER_MODULE>(rowPtr)
+                    rowPtr <- IntPtr.Add(rowPtr, Marshal.SizeOf<MIB_TCPROW_OWNER_MODULE>())
+                    rowStruct)
             |None -> []
         
         match tablePtr with
@@ -1396,17 +1534,19 @@
         | None -> ()
         rowList
 
+
     let createTCPRecord 
         (tcpRow: MIB_TCPROW_OWNER_MODULE) 
         : TCPConnection =
-        let tcpConnection = {localAddress = IPAddress(int64(tcpRow.LocalAddr))
-                             remoteAddress = IPAddress(int64(tcpRow.RemoteAddr))
-                             localport = BitConverter.ToUInt16([|tcpRow.LocalPort2;tcpRow.LocalPort1|], 0)
-                             remoteport = BitConverter.ToUInt16([|tcpRow.RemotePort2;tcpRow.RemotePort1|], 0)
-                             connectionState = tcpRow.State.ToString()
-                             pid = tcpRow.OwningPid
-                             service = getServiceNameInfo tcpRow.OwningPid (uint32(tcpRow.OwningModuleInfo0))
-                             }
+        let tcpConnection = {
+            localAddress = IPAddress(int64(tcpRow.LocalAddr))
+            remoteAddress = IPAddress(int64(tcpRow.RemoteAddr))
+            localport = BitConverter.ToUInt16([|tcpRow.LocalPort2;tcpRow.LocalPort1|], 0)
+            remoteport = BitConverter.ToUInt16([|tcpRow.RemotePort2;tcpRow.RemotePort1|], 0)
+            connectionState = tcpRow.State.ToString()
+            pid = tcpRow.OwningPid
+            service = getServiceNameInfo tcpRow.OwningPid (uint32(tcpRow.OwningModuleInfo0))
+            }
         tcpConnection
 
     ///////////////////////////
@@ -1438,9 +1578,9 @@
                 let mutable rowPtr = IntPtr.Add(tPtr, Marshal.SizeOf<MIB_UDPTABLE_OWNER_MODULE>())
                 [0u..(udpTable.numEntries - 1u)]
                 |> List.map(fun x -> 
-                                let rowStruct = Marshal.PtrToStructure<MIB_UDPROW_OWNER_MODULE>(rowPtr)
-                                rowPtr <- IntPtr.Add(rowPtr, Marshal.SizeOf<MIB_UDPROW_OWNER_MODULE>())
-                                rowStruct)
+                    let rowStruct = Marshal.PtrToStructure<MIB_UDPROW_OWNER_MODULE>(rowPtr)
+                    rowPtr <- IntPtr.Add(rowPtr, Marshal.SizeOf<MIB_UDPROW_OWNER_MODULE>())
+                    rowStruct)
             |None -> []
         
         match tablePtr with
@@ -1448,13 +1588,16 @@
         | None -> ()
         rowList
 
+
     let createUdpRecord 
         (udpRow: MIB_UDPROW_OWNER_MODULE) 
         : UDPListener =
-        let udpListener = {localAddress = IPAddress(int64(udpRow.LocalAddr))
-                           localport = BitConverter.ToUInt16([|udpRow.LocalPort2;udpRow.LocalPort1|], 0) 
-                           pid = udpRow.OwningPid
-                           service = getServiceNameInfo udpRow.OwningPid (uint32(udpRow.OwningModuleInfo0))}
+        let udpListener = {
+            localAddress = IPAddress(int64(udpRow.LocalAddr))
+            localport = BitConverter.ToUInt16([|udpRow.LocalPort2;udpRow.LocalPort1|], 0) 
+            pid = udpRow.OwningPid
+            service = getServiceNameInfo udpRow.OwningPid (uint32(udpRow.OwningModuleInfo0))
+            }
         udpListener
 
 
@@ -1468,26 +1611,26 @@
         let mutable tableSize = 0
         let mutable tablePtr = IntPtr.Zero
         let mutable tRowPtr = IntPtr.Zero
-
+        //Call twice, once for size of tablePtr, second for contents
         GetIpNetTable(tablePtr, &tableSize, false) |> ignore
         tablePtr <- Marshal.AllocHGlobal(tableSize)
-
         GetIpNetTable(tablePtr, &tableSize, false) |> ignore
 
         let tcpTable = Marshal.PtrToStructure<MIB_IPNETTABLE>(tablePtr)
         tRowPtr <- IntPtr.Add(tablePtr, 4)
         let arpTableByIndexResult = 
             [0..int(tcpTable.numEntries)- 1]
-            |> List.map(fun x -> let tcpRow = Marshal.PtrToStructure<MIB_IPNETROW>(tRowPtr)
-                                 tRowPtr <- IntPtr.Add(tRowPtr, Marshal.SizeOf<MIB_IPNETROW>())
-                                 tcpRow)
+            |> List.map(fun x -> 
+                let tcpRow = Marshal.PtrToStructure<MIB_IPNETROW>(tRowPtr)
+                tRowPtr <- IntPtr.Add(tRowPtr, Marshal.SizeOf<MIB_IPNETROW>())
+                tcpRow)
+            |> List.filter(fun row -> row.dwType = 3) //My opinionated belief that non-dynamic entries are mostly useless information
+            |> List.map(fun row -> 
+                let addr = IPAddress(BitConverter.GetBytes(row.dwAddr))
+                let hwaddr = BitConverter.ToString([|row.mac0;row.mac1;row.mac2;row.mac3;row.mac4;row.mac5|]) 
+                let arpTableByIndex = {indexaddresses = (row.dwIndex,(addr, hwaddr))}
+                arpTableByIndex)
 
-            |> List.filter(fun row -> row.dwType = 3) // My opinionated belief that non-dynamic entries are mostly useless information
-            |> List.map(fun row -> let addr = IPAddress(BitConverter.GetBytes(row.dwAddr))
-                                   let hwaddr = BitConverter.ToString([|row.mac0;row.mac1;row.mac2;row.mac3;row.mac4;row.mac5|]) 
-        
-                                   let arpTableByIndex = {indexaddresses = (row.dwIndex,(addr, hwaddr))}
-                                   arpTableByIndex)
         FreeMibTable(tablePtr) |> ignore
         arpTableByIndexResult
 
@@ -1500,18 +1643,22 @@
 
         let mutable tokenInfoLength = 0
         let mutable tokenInfo = IntPtr.Zero
-        // Have to call twice, once to get the size, again to fetch real value
-        GetTokenInformation(WindowsIdentity.GetCurrent().Token, 
-                            TOKEN_INFORMATION_CLASS.TokenPrivileges, 
-                            tokenInfo, 
-                            tokenInfoLength, 
-                            &tokenInfoLength) |> ignore
+        //Have to call twice, once to get the size, again to fetch real value
+        GetTokenInformation(
+            WindowsIdentity.GetCurrent().Token, 
+            TOKEN_INFORMATION_CLASS.TokenPrivileges, 
+            tokenInfo, 
+            tokenInfoLength, 
+            &tokenInfoLength
+            ) |> ignore
         tokenInfo <- Marshal.AllocHGlobal(tokenInfoLength)
-        GetTokenInformation(WindowsIdentity.GetCurrent().Token, 
-                            TOKEN_INFORMATION_CLASS.TokenPrivileges, 
-                            tokenInfo, 
-                            tokenInfoLength, 
-                            &tokenInfoLength) |> ignore
+        GetTokenInformation(
+            WindowsIdentity.GetCurrent().Token, 
+            TOKEN_INFORMATION_CLASS.TokenPrivileges, 
+            tokenInfo, 
+            tokenInfoLength, 
+            &tokenInfoLength
+            ) |> ignore
         //Fetch the struct from the tokenInfo Ptr, and then advance it to ready
         //for the rest of the calculation
         let tokenPrivs = Marshal.PtrToStructure<TOKEN_PRIVILEGES>(tokenInfo)
@@ -1521,15 +1668,15 @@
         let privList = 
             [0..(tokenPrivs.privilegeCount - 1)]
             |> List.map(fun count ->  
-                            let mutable cchName = 0
-                            let mutable stringPtr = IntPtr.Zero
-                            LookupPrivilegeName("", privPtr, stringPtr, &cchName) |> ignore
-                            stringPtr <- Marshal.AllocHGlobal(cchName)
-                            LookupPrivilegeName("", privPtr, stringPtr, &cchName) |> ignore
-                            let privString =  Marshal.PtrToStringAnsi(stringPtr)
-                            privPtr <- IntPtr.Add(privPtr, 12)
-                            Marshal.FreeHGlobal(stringPtr)
-                            privString)
+                let mutable cchName = 0
+                let mutable stringPtr = IntPtr.Zero
+                LookupPrivilegeName("", privPtr, stringPtr, &cchName) |> ignore
+                stringPtr <- Marshal.AllocHGlobal(cchName)
+                LookupPrivilegeName("", privPtr, stringPtr, &cchName) |> ignore
+                let privString =  Marshal.PtrToStringAnsi(stringPtr)
+                privPtr <- IntPtr.Add(privPtr, 12)
+                Marshal.FreeHGlobal(stringPtr)
+                privString)
         //Pack and ship
         let tokenPrivileges = {privileges = privList}
         tokenPrivileges
