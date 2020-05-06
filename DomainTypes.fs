@@ -11,43 +11,43 @@ module Fetters.DomainTypes
     type InterestingFile = {
         reason : string
         location : string
-    }
+        }
 
     type Recent_File = {
         location : string
-    }
+        }
 
     // Credential types
     type AWSCredential = {
         username : string
         password : string
-    }
+        }
 
     type AzureCredential = {
         username : string
         password : string
-    }
+        }
 
     type DPAPIBlob = {
         username : string 
         password : string 
-    }
+        }
 
     type GoogleCredential = {
         username : string 
         password : string 
-    }
+        }
 
     type NetworkCredential = {
         username : string 
         password : string 
-    }
+        }
 
     type SSHCredential = {
         username : string
         key : string option
         password : string option
-    }
+        }
 
     ///////////////
     // System Types
@@ -55,17 +55,21 @@ module Fetters.DomainTypes
     type Disk = {
         name : string
         size: string
-        mountpoint : string}
+        mountpoint : string
+        }
 
     type Firewall = {
         name : string
-        rules : string list}
+        rules : string list
+        }
 
     type ArpTableByInd = {
-        indexaddresses : (int32 * (IPAddress * string))}
+        indexaddresses : (int32 * (IPAddress * string))
+        }
 
     type ArpTable = {
-        addresses : (IPAddress * string) list}
+        addresses : (IPAddress * string) list
+        }
 
     type Interface = {
         adapterIndex : uint16
@@ -74,18 +78,35 @@ module Fetters.DomainTypes
         gatewayAddr : IPAddress
         dnsServers : IPAddress list
         dhcpServers : IPAddress list
-        arpTable : ArpTable}
+        arpTable : ArpTable
+        }
 
     type Network = {
-        interfaces : Interface list}
+        interfaces : Interface list
+        }
 
     type PC = {
         hostname : string
-        is_vm : bool}
+        is_vm : bool
+        }
+
+    type RegistryValueType = 
+        |String of string
+        |ExpandString of string
+        |Binary of byte array
+        |DWord of int32
+        |MultiString of string array
+        |QWord of int64
+
+    type RegistryResult = {
+        name : string
+        value : RegistryValueType
+        }
 
     type Session = {
         token : string 
-        logon_type : string}
+        logon_type : string
+        }
 
     type WindowsDetails = {
         winVer : string 
@@ -100,7 +121,7 @@ module Fetters.DomainTypes
         pc : PC
         sessions : Session list
         winDetails : WindowsDetails
-    }
+        }
     //////////////////////
     // System Secret Types
     //////////////////////
@@ -133,7 +154,7 @@ module Fetters.DomainTypes
         mruCommands : string list
         rdpConnections : string list
         vaultSecrets : VaultRecord list
-    }
+        }
 
     /////////////////////////////////
     // System Static Attributes Types
@@ -141,16 +162,22 @@ module Fetters.DomainTypes
 
     type AutorunKey = AutorunKey of RegistryKey
 
+    type AntiVirus = {
+        engine : string
+        productExe : string
+        reportingExe : string
+        }
+    
     type EnvironmentVar = {
         environmentKey : string
         environmentVal : string 
-    }
+        }
 
     type LocalGroup = {
         name : string
         sid : string
         members : string list
-    }
+        }
 
     type LSASettings = {
         lsaPid : uint16
@@ -165,14 +192,29 @@ module Fetters.DomainTypes
         restrictAnon : bool 
         restrictSAM : bool 
         samConnAccnt : bool 
-    }
+        }
 
+    type MappedDrive = {
+        connectionState : string
+        localName : string
+        persistent : string
+        remoteName : string
+        remotePath : string
+        status : string
+        userName : string
+        }
+    
+    type Patch = {
+        description : string
+        hotfixId : string
+        installedOn : string}
+    
     type PowerShellEnv = {
         poshVersion : string 
         poshTLog : string 
         poshMLog : string 
         poshSLog : string 
-    }
+        }
 
     type ServiceBinaryPath = 
         |Unquoted_Path
@@ -187,19 +229,19 @@ module Fetters.DomainTypes
         serviceStarttype : string 
         serviceIsdotnet : string 
         serviceBinpath : ServiceBinaryPath
-    }
+        }
 
     type Share = {
         shareName : string 
         shareDesc : string 
         sharePath : string 
-    }
+        }
 
     type User = { 
          name : string
          domain : string
          sid: string
-     }
+         }
  
     type SystemStaticAttributes = {
         autoruns : AutorunKey list
@@ -215,7 +257,7 @@ module Fetters.DomainTypes
         users : User list
         userFolders : string list
         wefEn : bool 
-    }
+        }
 
     ////////////////////////////
     // System dynamic Attributes
@@ -284,12 +326,17 @@ module Fetters.DomainTypes
         logonServerDnsDomain : string
         userPrincipalName : string
         kerberosCachedTickets : KerberosTicket list
-        kerberosTGTcontents : KerberosTicket list}
+        kerberosTGTcontents : KerberosTicket list
+        }
 
     type Event = {
         eventId : uint32 
         eventDesc : string 
-    }
+        }
+
+    type InterestingProcess = {
+        reason : string
+        description : string}
 
     type Process = {
         processName : string 
@@ -297,8 +344,9 @@ module Fetters.DomainTypes
         processBinpath : string 
         processInvocation : string 
         processIntegrity : string 
-        dotnetProcess : string 
-    }
+        dotnetProcess : string
+        InterestingProcess : InterestingProcess option
+        }
 
     type RdpSession = {
         state : string
@@ -316,16 +364,19 @@ module Fetters.DomainTypes
         remoteport : uint16
         connectionState : string
         pid : uint32
-        service : string option}
+        service : string option
+        }
 
     type TokenPrivileges = {
-         privileges : string list}
+         privileges : string list
+        }
 
     type UDPListener = {
         localAddress : IPAddress
         localport : uint16
         pid : uint32
-        service : string option}
+        service : string option
+        }
 
     type SystemDynamicAttributes = {
         domainSessions : DomainSession list
@@ -335,14 +386,15 @@ module Fetters.DomainTypes
         rdpSessions : RdpSession list
         tcpConnections : TCPConnection list
         udpTraffic : UDPListener list
-        userTokenPrivileges : TokenPrivileges}
+        userTokenPrivileges : TokenPrivileges
+        }
 
     type FullOutput = {
         loot : SystemSecrets
         sys : System
         sysStatic : SystemStaticAttributes
         sysSnapshot : SystemDynamicAttributes
-    }
+        }
     /////////////////////////
     // WMI Query Module types
     /////////////////////////
@@ -357,17 +409,25 @@ module Fetters.DomainTypes
         }
 
     type WmiSemaphore = 
+        |SAV
         |SDisk
         |SGroup
-        |SOS
+        |SMappedDrive
+        |SNetworkShare
+        |SPatches
+        |SOSDetails
         |SUser
     
     type Null = Null of string
 
     type WmiRecord = 
+        |AV of AntiVirus
         |Disk of Disk
         |Group of LocalGroup
+        |MappedDrive of MappedDrive
+        |Share of Share
         |OS of WindowsDetails
+        |Patch of Patch
         |User of User
         |Null of Null
         
