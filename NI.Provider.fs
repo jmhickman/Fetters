@@ -1011,7 +1011,7 @@
 
     let getSystem () = 
         //Impersonate the NTAUTHORITY\SYSTEM user for the purposes of high integrity actions.
-        match (getCurrentRole WindowsBuiltInRole.Administrator) with
+        match isHighIntegrity with
         | true -> impersonateSystem ()
         | false -> sprintf "Current role cannot escalate privileges"
         
@@ -1247,7 +1247,7 @@
         //run through this function, and low priv enum can't get session info
         //So a dummy value 'Everyone' SID is placed here.
         let SID = 
-             match getCurrentRole WindowsBuiltInRole.Administrator with
+             match isHighIntegrity with
              |true -> SecurityIdentifier(sess.pSID)
              |false -> SecurityIdentifier("S-1-1-0")
                      
@@ -1293,7 +1293,7 @@
         
         
         let tTuple = 
-            match getCurrentRole WindowsBuiltInRole.Administrator with
+            match isHighIntegrity with
             |true -> printfn "%s" <| getSystem()
                      let lsaHandle = registerLsaLogonProcess ()
                      let lsaAuthPackage = lookupLsaAuthenticationPackage lsaHandle LSAStringQuery

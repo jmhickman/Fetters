@@ -22,8 +22,8 @@
 
   <ItemGroup>
     <Compile Include="Lists.fs" />
-    <Compile Include="dotNetFunctions.fs" />
     <Compile Include="DomainTypes.fs" />
+    <Compile Include="dotNetFunctions.fs" />
     <Compile Include="NI.Provider.fs" />
     <Compile Include="WMI.Provider.fs" />
     <Compile Include="Registry.Provider.fs" />
