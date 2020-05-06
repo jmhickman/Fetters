@@ -22,13 +22,13 @@
     //Registry
     //////////
 
-    let getRegistryValue (hive: string) (path: string, name: string) : RegistryResult =
+    let getRegistryValue (hive: RegHive) (path: string, name: string) : RegistryResult =
 
         let blank = {name=""
                      value = "" |> String}
         blank
 
 
-    let getRegistryValueHKCU = getRegistryValue "HKEY_CURRENT_USER"
-    let getRegistryValueHKU = getRegistryValue "HKEY_USER"
-    let getRegistryValueHKLM = getRegistryValue "HKEY_LOCAL_MACHINE"
+    let getRegistryValueHKCU = getRegistryValue HKEY_CURRENT_USER
+    let getRegistryValueHKU = getRegistryValue HKEY_USER
+    let getRegistryValueHKLM = getRegistryValue HKEY_LOCAL_MACHINE

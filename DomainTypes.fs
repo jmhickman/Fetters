@@ -396,7 +396,7 @@ module Fetters.DomainTypes
         sysSnapshot : SystemDynamicAttributes
         }
     /////////////////////////
-    // WMI Query Module types
+    // WMI Query Module Types
     /////////////////////////
 
     type WmiQueryType = {
@@ -459,3 +459,13 @@ module Fetters.DomainTypes
 
     type VaultHandle = VaultHandle of IntPtr
     
+    ///////////////
+    // dotNet Types
+    ///////////////
+
+    //These are for the dotNet.Common and Registry.Provider functions
+
+    type RegHive = 
+        |HKEY_LOCAL_MACHINE
+        |HKEY_CURRENT_USER
+        |HKEY_USER
