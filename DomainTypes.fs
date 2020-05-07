@@ -1,5 +1,3 @@
-// Domain Types
-
 module Fetters.DomainTypes
 
     open Microsoft.Win32
@@ -7,17 +5,11 @@ module Fetters.DomainTypes
     open System.Net
     open System.Security
 
-    // File types
-    type InterestingFile = {
-        reason : string
-        location : string
-        }
+    //////////////////
+    //Elementary types
+    //////////////////
 
-    type Recent_File = {
-        location : string
-        }
-
-    // Credential types
+    //// Credential types ////
     type AWSCredential = {
         username : string
         password : string
@@ -48,6 +40,30 @@ module Fetters.DomainTypes
         key : string option
         password : string option
         }
+
+    //// File Types ////
+    type InterestingFile = {
+        reason : string
+        location : string
+        }
+
+    type Recent_File = {
+        location : string
+        }
+
+    //// Registry Types ////
+    type RegistryValueType = 
+         |String of string
+         |ExpandString of string
+         |Binary of byte array
+         |DWord of int32
+         |MultiString of string array
+         |QWord of int64
+
+     type RegistryResult = {
+         name : string
+         value : RegistryValueType
+         }
 
     ///////////////
     // System Types
@@ -88,19 +104,6 @@ module Fetters.DomainTypes
     type PC = {
         hostname : string
         is_vm : bool
-        }
-
-    type RegistryValueType = 
-        |String of string
-        |ExpandString of string
-        |Binary of byte array
-        |DWord of int32
-        |MultiString of string array
-        |QWord of int64
-
-    type RegistryResult = {
-        name : string
-        value : RegistryValueType
         }
 
     type Session = {
@@ -173,6 +176,13 @@ module Fetters.DomainTypes
         environmentVal : string 
         }
 
+    type LapsSettings = {
+        lapsAdminAccountName : RegistryResult option
+        lapsPasswordComplexity : RegistryResult option
+        lapsPasswordLength : RegistryResult option
+        lapsPasswdProtection : RegistryResult option
+        }
+
     type LocalGroup = {
         name : string
         sid : string
@@ -215,6 +225,8 @@ module Fetters.DomainTypes
         poshMLog : string 
         poshSLog : string 
         }
+
+ 
 
     type ServiceBinaryPath = 
         |Unquoted_Path

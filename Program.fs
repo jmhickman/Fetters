@@ -2,9 +2,10 @@
 open System.Management
 
 open Fetters.DomainTypes 
-open Fetters.NI.Providers
+//open Fetters.NI.Providers
 open Fetters.WMI.Providers
-open Fetters.dotNet.Common
+//open Fetters.dotNet.Common
+open Fetters.Registry.Provider
 
 
 // Testing/rework harness
@@ -17,10 +18,13 @@ open Fetters.dotNet.Common
 //queryWMI SAV |> List.iter(fun x -> printfn "%A" x) //no result, but didn't explode either
 //queryWMI SPatches |> List.iter(fun x -> printfn "%A" x) //
 
-let bindit = 
-    getRegistryValueHKCU "Software\Microsoft\BingASDS\BingAs" 
-    |> Option.map(fun key -> getRegistryValue "QuerycountStartTime" key)
-
+(*let bindit = 
+    getRegistryValueHKCU "Software\Microsoft\BingASDS\BigAs" 
+    |> Option.map(fun key -> getRegistryValue "HotKeyStae" key)
+printfn "size of bindit: %b" bindit.IsNone
 match bindit with
-|Some x -> match x with | QWord y -> printfn "%i" y
-|None -> ()
+|Some x -> match x with | String y -> printfn "%s" y
+|None -> ()*)
+
+let laps = getLAPSSettings ()
+printfn "Boolean test: %b" laps.IsNone
