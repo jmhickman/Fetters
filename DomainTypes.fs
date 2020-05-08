@@ -163,7 +163,15 @@ module Fetters.DomainTypes
     // System Static Attributes Types
     /////////////////////////////////
 
-    type AutorunKey = AutorunKey of RegistryKey
+    type AutoLogonSettings = {
+        defaultDomainName : RegistryResult option
+        defaultUserName : RegistryResult option
+        defaultPassword : RegistryResult option
+        altDefaultDomainName : RegistryResult option
+        altDefaultUserName : RegistryResult option
+        altDefaultPassword : RegistryResult option
+        }
+
 
     type AntiVirus = {
         engine : string
@@ -226,7 +234,10 @@ module Fetters.DomainTypes
         poshSLog : string 
         }
 
- 
+    type RDPSavedConnection = {
+        host : string
+        usernameHint : RegistryResult option
+        }
 
     type ServiceBinaryPath = 
         |Unquoted_Path
@@ -249,6 +260,12 @@ module Fetters.DomainTypes
         sharePath : string 
         }
 
+    type SysmonConfig = {
+        hashingAlgorithm : RegistryResult option
+        options : RegistryResult option
+        rules : RegistryResult option
+        }
+    
     type User = { 
          name : string
          domain : string
@@ -256,7 +273,7 @@ module Fetters.DomainTypes
          }
  
     type SystemStaticAttributes = {
-        autoruns : AutorunKey list
+        //autoruns : 
         environmentVars : EnvironmentVar list
         localGroupsAndMembers : LocalGroup list
         lsaSettings : LSASettings

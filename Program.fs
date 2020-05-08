@@ -26,5 +26,12 @@ match bindit with
 |Some x -> match x with | String y -> printfn "%s" y
 |None -> ()*)
 
-let laps = getLAPSSettings ()
-printfn "Boolean test: %b" laps.IsNone
+//let laps = getLAPSSettings ()
+//printfn "laps not present: %b" laps.IsNone
+
+//let autologon = getAutoLogonSettings ()
+//printfn "Autologon not present: %b" autologon.IsNone
+//printfn "%A" autologon
+
+let results =  getRDPSavedConnections ()
+printfn "%A" results

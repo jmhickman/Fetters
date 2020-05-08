@@ -41,11 +41,36 @@
             let rKey = Registry.CurrentUser.OpenSubKey(path)
             if rKey  = null then None else rKey |> Some
 
-    let getRegistryValueHKCU = getRegistryKey HKEY_CURRENT_USER
-    let getRegistryValueHKU = getRegistryKey HKEY_USER
-    let getRegistryValueHKLM = getRegistryKey HKEY_LOCAL_MACHINE
-    let getThrowawayKey = Registry.CurrentUser.OpenSubKey("Software")
+    let getRegistryKeyHKCU = getRegistryKey HKEY_CURRENT_USER
+    let getRegistryKeyHKU = getRegistryKey HKEY_USER
+    let getRegistryKeyHKLM = getRegistryKey HKEY_LOCAL_MACHINE
+    let getThrowawayKey = getRegistryKeyHKCU "Software"
 
+    
+    let getRegistrySubKeyNames (hive: RegHive) (path: string) : string array =
+        match hive with
+        |HKEY_LOCAL_MACHINE -> 
+            let rKey = Registry.LocalMachine.OpenSubKey(path)
+            if rKey = null then [||] else  
+                rKey.GetSubKeyNames()
+                |> Array.filter(fun x -> not(x = null))
+        |HKEY_USER -> 
+            let rKey = Registry.Users.OpenSubKey(path)
+            if rKey = null then [||] else    
+                rKey.GetSubKeyNames()
+                |> Array.filter(fun x -> not(x = null))
+        |HKEY_CURRENT_USER ->
+            let rKey = Registry.CurrentUser.OpenSubKey(path)
+            if rKey = null then [||] else    
+                rKey.GetSubKeyNames()
+                |> Array.filter(fun x -> not(x = null))
+
+
+    let getRegistrySubKeyNamesHKCU = getRegistrySubKeyNames HKEY_CURRENT_USER
+    let getRegistrySubKeyNamesHKU = getRegistrySubKeyNames HKEY_USER
+    let getRegistrySubKeyNamesHKLM = getRegistrySubKeyNames HKEY_LOCAL_MACHINE
+    
+    
     let getRegistryValue (name: string) (key: RegistryKey) : RegistryResult option =
         //This doesn't take an RegistryKey option because I don't want to reach
         //this function with Nones. There's no point.
@@ -67,3 +92,7 @@
         match rKind with
         |Some rKind -> {name = name; value = extractType rKind rObj} |> Some
         |None -> None
+
+
+    
+            
