@@ -55,3 +55,11 @@
         "restrictanonymoussam"
         "SamConnectedAccountsExist"
         |]
+
+    let puttySessionNames = [|
+        "HostName"
+        "UserName"
+        "PublicKeyFile"
+        "PortForwardings"
+        "ConnectionSharing"
+        |]
