@@ -33,5 +33,14 @@ match bindit with
 //printfn "Autologon not present: %b" autologon.IsNone
 //printfn "%A" autologon
 
-let results =  getRDPSavedConnections ()
-printfn "%A" results
+//let results =  getRDPSavedConnections ()
+//printfn "%A" results
+
+//let recents = getRecentRuncommands ()
+//printfn "%A" recents
+
+//let uac = getUACSystemPolicies ()
+//printfn "%A" uac
+
+let psh = getPShellEnv ()
+printfn "%A" psh

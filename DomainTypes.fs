@@ -228,15 +228,20 @@ module Fetters.DomainTypes
         installedOn : string}
     
     type PowerShellEnv = {
-        poshVersion : string 
-        poshTLog : string 
-        poshMLog : string 
-        poshSLog : string 
+        poshVersion2 : RegistryResult option 
+        poshVersion5 : RegistryResult option 
+        poshTLog : RegistryResult option []
+        poshMLog : RegistryResult option []
+        poshSLog : RegistryResult option []
         }
 
     type RDPSavedConnection = {
         host : string
         usernameHint : RegistryResult option
+        }
+
+    type RecentCommand = {
+        recentCommand : RegistryResult option
         }
 
     type ServiceBinaryPath = 
@@ -266,6 +271,14 @@ module Fetters.DomainTypes
         rules : RegistryResult option
         }
     
+    type UACPolicies = {
+        //Will need to do some logic with these values to print restiction
+        //information at export.
+        consentPromptBehavior : RegistryResult option
+        enableLUA : RegistryResult option
+        localAccountTokenFilterPolicy : RegistryResult option
+        filterAdministratorToken : RegistryResult option
+        }
     type User = { 
          name : string
          domain : string
@@ -418,12 +431,7 @@ module Fetters.DomainTypes
         userTokenPrivileges : TokenPrivileges
         }
 
-    type FullOutput = {
-        loot : SystemSecrets
-        sys : System
-        sysStatic : SystemStaticAttributes
-        sysSnapshot : SystemDynamicAttributes
-        }
+    
     /////////////////////////
     // WMI Query Module Types
     /////////////////////////

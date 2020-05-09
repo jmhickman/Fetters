@@ -165,9 +165,11 @@
         (semaphore: WmiSemaphore)
         : WmiRecord list = 
         initializeManagementScope <| localScope semaphore 
-        |> fun cs -> match connectManagementScope cs with
-                     |Some xu -> createObjectQuery semaphore 
-                                 |> createObjectSearcher cs 
-                                 |> generateRawWMIResult semaphore 
-                                 |> createRecord semaphore
-                     |None -> []
+        |> fun cs -> 
+            match connectManagementScope cs with
+            |Some xu -> 
+                createObjectQuery semaphore 
+                |> createObjectSearcher cs 
+                |> generateRawWMIResult semaphore 
+                |> createRecord semaphore
+            |None -> []

@@ -60,27 +60,13 @@
     let getRDPSavedConnections ()
         : RDPSavedConnection [] =
         //Performs differently if running high or low integrity.
-        let collectHighIntegrity () =
-            getRegistrySubKeyNamesHKU ""
-            |> Array.filter(fun x ->  x.StartsWith("S-1-5") && not (x.Contains("_Classes")))
-            |> Array.map(fun x -> 
-                let path = sprintf "%s\\Software\\Microsoft\\Terminal Server Client\\Servers" x
-                (HKEY_USER, path, getRegistrySubKeyNamesHKU path))
-            |> Array.filter(fun f -> 
-                let _, _, fs = f
-                not ( fs |> Array.isEmpty))
-         
-        let collectLowIntegrity () =
-            match getRegistrySubKeyNamesHKCU "Software\\Microsoft\\Terminal Server Client\\Servers" with
-            | x when x.Length > 0 -> [|(HKEY_CURRENT_USER, "Software\\Microsoft\\Terminal Server client\\Servers", x)|]
-            | _ -> [|(HKEY_CURRENT_USER, "Software\\Microsoft\\Terminal Server Client\\Servers", [||])|]
-            
+                    
         let rArray = 
             match isHighIntegrity with
-            |true -> collectHighIntegrity ()
-            |false -> collectLowIntegrity ()
+            |true -> collectHighIntegritySubKeysHKU "Software\\Microsoft\\Terminal Server Client\\Servers"
+            |false -> collectLowIntegritySubKeysHKCU "Software\\Microsoft\\Terminal Server Client\\Servers"
         
-        let unflattened = 
+        let uArray = 
             rArray 
             |> Array.map(fun tu ->
                 let hive, path, pArray = tu
@@ -91,10 +77,103 @@
                     |None -> {host = ""; usernameHint = None}
                     ))
                 
-        match unflattened.Length with
-        |x when x > 0 -> unflattened |> Array.reduce Array.append
+        match uArray.Length with
+        |x when x > 0 -> uArray |> Array.reduce Array.append
         |_ -> [||]
             
         
+    
+    let getRecentRuncommands ()
+     : RecentCommand [] =
+    // MRU for all users if high integrity, current user otherwise
+        let rArray = 
+            match isHighIntegrity with
+            |true -> collectHighIntegrityNames HKEY_USER "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU"
+            |false -> collectLowIntegrityNames HKEY_CURRENT_USER "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU"
+        printfn "rArray sx: %i" rArray.Length
+
+        let uArray =
+            rArray
+            |> Array.map(fun tu ->
+                let rKey, pArray = tu
+                pArray
+                |> Array.filter(fun f -> not(f = "MRUList")) //We don't care
+                |> Array.map(fun p ->
+                    match getRegistryValue p rKey with
+                    |Some value ->  {recentCommand = value |> Some} 
+                    |None -> {recentCommand = None} )
+                    )
         
+        match uArray.Length with
+        |x when x > 0 -> uArray |> Array.reduce Array.append
+        |_ -> [||]
+
+    let getUACSystemPolicies ()
+        : UACPolicies =
+        let uacKey = 
+           match getRegistryKeyHKLM "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System"  with
+           |Some rKey -> rKey
+           |None -> getThrowawayKey
         
+        let consentPromptBehavior = 
+            match getRegistryValue "ConsentPromptBehaviorAdmin" uacKey with
+            |Some value -> value |> Some
+            |None -> None
+        let enableLUA = 
+            match getRegistryValue "EnableLUA" uacKey with
+            |Some value -> value |> Some
+            |None -> None
+        let localAccounttokenFilterPolicy =
+            match getRegistryValue "LocalAccounttokenFilterPolicy" uacKey with
+            |Some value -> value |> Some
+            |None -> None
+        let filterAdministratorToken = 
+            match getRegistryValue "FilterAdministratorToken" uacKey with
+            |Some value -> value |> Some
+            |None -> None
+        
+        {
+         consentPromptBehavior = consentPromptBehavior
+         enableLUA = enableLUA
+         localAccountTokenFilterPolicy = localAccounttokenFilterPolicy
+         filterAdministratorToken = filterAdministratorToken
+         }
+
+
+    let getPShellEnv () 
+        : PowerShellEnv =
+        let pshellver2 = 
+            match getRegistryKeyHKLM "SOFTWARE\\Microsoft\\PowerShell\\1\\PowerShellEngine"  with
+            |Some rKey -> getRegistryValue "PowerShellVersion" rKey
+            |None -> None
+        let pshellver5 = 
+            match getRegistryKeyHKLM "SOFTWARE\\Microsoft\\PowerShell\\3\\PowerShellEngine"  with
+            |Some rKey -> getRegistryValue "PowerShellVersion" rKey
+            |None -> None
+        
+        let pshellTLog = 
+            collectLowIntegrityNames HKEY_LOCAL_MACHINE "SOFTWARE\\Policies\\Microsoft\\Windows\\PowerShell\\Transcription"
+            |> Array.map(fun (rKey, pArray) -> 
+                pArray
+                |> Array.map(fun p -> getRegistryValue p rKey))
+                |> Array.reduce Array.append
+        let pshellMLog = 
+            collectLowIntegrityNames HKEY_LOCAL_MACHINE "SOFTWARE\\Policies\\Microsoft\\Windows\\PowerShell\\ModuleLogging"
+            |> Array.map(fun (rKey, pArray) -> 
+                pArray
+                |> Array.map(fun p -> getRegistryValue p rKey))
+                |> Array.reduce Array.append
+        let pshellSLog = 
+            collectLowIntegrityNames HKEY_LOCAL_MACHINE "SOFTWARE\\Policies\\Microsoft\\Windows\\PowerShell\\ScriptBlockLogging"
+            |> Array.map(fun (rKey, pArray) -> 
+                pArray
+                |> Array.map(fun p -> getRegistryValue p rKey))
+                |> Array.reduce Array.append
+
+        {
+         poshVersion2 = pshellver2
+         poshVersion5 = pshellver5
+         poshTLog = pshellTLog
+         poshMLog = pshellMLog
+         poshSLog = pshellSLog
+         }

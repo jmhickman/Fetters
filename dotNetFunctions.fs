@@ -15,10 +15,8 @@
     // the user is in. An administrative user will still come back False if their token
     // is not elevated, so be aware of the difference.
 
-        let currentUser = WindowsPrincipal(WindowsIdentity.GetCurrent())
-        currentUser.IsInRole(role)
+        WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(role)
 
-    
     //Partial application for testing if the process is high integrity
     let isHighIntegrity = getCurrentRole WindowsBuiltInRole.Administrator
 
@@ -44,7 +42,8 @@
     let getRegistryKeyHKCU = getRegistryKey HKEY_CURRENT_USER
     let getRegistryKeyHKU = getRegistryKey HKEY_USER
     let getRegistryKeyHKLM = getRegistryKey HKEY_LOCAL_MACHINE
-    let getThrowawayKey = getRegistryKeyHKCU "Software"
+    let getThrowawayKeyOption = getRegistryKeyHKCU "Software"
+    let getThrowawayKey = Registry.CurrentUser.OpenSubKey("Software")
 
     
     let getRegistrySubKeyNames (hive: RegHive) (path: string) : string array =
@@ -93,6 +92,35 @@
         |Some rKind -> {name = name; value = extractType rKind rObj} |> Some
         |None -> None
 
+    let collectHighIntegritySubKeysHKU (path: string) =
+        getRegistrySubKeyNamesHKU ""
+        |> Array.filter(fun x ->  x.StartsWith("S-1-5") && not (x.Contains("_Classes")))
+        |> Array.map(fun sidPath -> 
+            let fpath = sprintf "%s\\%s" sidPath path 
+            (HKEY_USER, path, getRegistrySubKeyNamesHKU fpath))
+        |> Array.filter(fun f -> 
+            let _, _, fs = f
+            not ( fs |> Array.isEmpty))
 
+    let collectLowIntegritySubKeysHKCU (path: string) =
+        match getRegistrySubKeyNamesHKCU path with
+        | xa when xa.Length > 0 -> [|(HKEY_CURRENT_USER, path, xa)|]
+        | _ -> [|(HKEY_CURRENT_USER, path, [||])|]
     
-            
+    
+    let collectHighIntegrityNames (hive: RegHive) (path: string) =
+        getRegistrySubKeyNames hive ""
+        |> Array.filter(fun x ->  x.StartsWith("S-1-5") && not (x.Contains("_Classes")))
+        |> Array.map(fun sidPath -> 
+            let fpath = sprintf "%s\\%s" sidPath path 
+            match getRegistryKeyHKU fpath with
+            |Some rKey -> (rKey, rKey.GetValueNames())
+            |None -> (getThrowawayKey, [||]))
+        |> Array.filter(fun f -> 
+            let _, fs = f
+            not ( fs |> Array.isEmpty))
+
+    let collectLowIntegrityNames (hive: RegHive) (path: string) =
+        match getRegistryKey hive path with
+        |Some rKey -> [|rKey, rKey.GetValueNames()|]
+        |None -> [|getThrowawayKey, [||]|]
