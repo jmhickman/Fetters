@@ -38,5 +38,20 @@
          ("splunk-winevtlog.exe","Splunk","Logging")
          ("sysmon.exe","SysinternalsSysmon","Logging")
          ("TaniumClient.exe","Tanium","EDR")
-         ("vstskmgr.exe","McAfeeVirusScanEnterprise","AV")]
+         ("vstskmgr.exe","McAfeeVirusScanEnterprise","AV")
+         ]
 
+    let lsaNames = [|
+        "LsaPid"
+        "Notification Packages"
+        "Authentication Packages"
+        "ProductType"
+        "LimitBlankPasswordUse"
+        "SecureBoot"
+        "disabledomaincreds"
+        "everyoneincludesanonymous"
+        "forceguest"
+        "restrictanonymous"
+        "restrictanonymoussam"
+        "SamConnectedAccountsExist"
+        |]

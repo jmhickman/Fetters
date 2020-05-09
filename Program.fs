@@ -26,21 +26,27 @@ match bindit with
 |Some x -> match x with | String y -> printfn "%s" y
 |None -> ()*)
 
-//let laps = getLAPSSettings ()
-//printfn "laps not present: %b" laps.IsNone
+let laps = getLAPSSettings ()
+printfn "laps not present: %b" laps.IsNone
 
-//let autologon = getAutoLogonSettings ()
-//printfn "Autologon not present: %b" autologon.IsNone
-//printfn "%A" autologon
+let autologon = getAutoLogonSettings ()
+printfn "Autologon not present: %b" autologon.IsNone
+printfn "%A" autologon
 
-//let results =  getRDPSavedConnections ()
-//printfn "%A" results
+let results =  getRDPSavedConnections ()
+printfn "%A" results
 
-//let recents = getRecentRuncommands ()
-//printfn "%A" recents
+let recents = getRecentRuncommands ()
+printfn "%A" recents
 
-//let uac = getUACSystemPolicies ()
-//printfn "%A" uac
+let uac = getUACSystemPolicies ()
+printfn "%A" uac
 
 let psh = getPShellEnv ()
 printfn "%A" psh
+
+let iss = getInternetSettings ()
+printfn "%A" iss
+
+let lsa = getLSASettings ()
+printfn "%A" lsa

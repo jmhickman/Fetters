@@ -1,5 +1,6 @@
 ﻿module Fetters.Registry.Provider
 
+    open Fetters.Lists
     open Fetters.dotNet.Common
     open Fetters.DomainTypes
 
@@ -90,58 +91,41 @@
             match isHighIntegrity with
             |true -> collectHighIntegrityNames HKEY_USER "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU"
             |false -> collectLowIntegrityNames HKEY_CURRENT_USER "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU"
-        printfn "rArray sx: %i" rArray.Length
-
+        
         let uArray =
             rArray
             |> Array.map(fun tu ->
                 let rKey, pArray = tu
                 pArray
                 |> Array.filter(fun f -> not(f = "MRUList")) //We don't care
-                |> Array.map(fun p ->
-                    match getRegistryValue p rKey with
-                    |Some value ->  {recentCommand = value |> Some} 
-                    |None -> {recentCommand = None} )
-                    )
-        
+                |> Array.map(fun p -> {recentCommand = getRegistryValue p rKey}))
+                    
         match uArray.Length with
         |x when x > 0 -> uArray |> Array.reduce Array.append
         |_ -> [||]
 
+
     let getUACSystemPolicies ()
-        : UACPolicies =
+        : UACPolicies option =
         let uacKey = 
            match getRegistryKeyHKLM "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System"  with
            |Some rKey -> rKey
            |None -> getThrowawayKey
         
-        let consentPromptBehavior = 
-            match getRegistryValue "ConsentPromptBehaviorAdmin" uacKey with
-            |Some value -> value |> Some
-            |None -> None
-        let enableLUA = 
-            match getRegistryValue "EnableLUA" uacKey with
-            |Some value -> value |> Some
-            |None -> None
-        let localAccounttokenFilterPolicy =
-            match getRegistryValue "LocalAccounttokenFilterPolicy" uacKey with
-            |Some value -> value |> Some
-            |None -> None
-        let filterAdministratorToken = 
-            match getRegistryValue "FilterAdministratorToken" uacKey with
-            |Some value -> value |> Some
-            |None -> None
-        
-        {
-         consentPromptBehavior = consentPromptBehavior
+        let consentPromptBehavior = getRegistryValue "ConsentPromptBehaviorAdmin" uacKey
+        let enableLUA = getRegistryValue "EnableLUA" uacKey 
+        let localAccounttokenFilterPolicy = getRegistryValue "LocalAccounttokenFilterPolicy" uacKey
+        let filterAdministratorToken = getRegistryValue "FilterAdministratorToken" uacKey
+                
+        {consentPromptBehavior = consentPromptBehavior
          enableLUA = enableLUA
          localAccountTokenFilterPolicy = localAccounttokenFilterPolicy
          filterAdministratorToken = filterAdministratorToken
-         }
+         } |> Some
 
 
     let getPShellEnv () 
-        : PowerShellEnv =
+        : PowerShellEnv option =
         let pshellver2 = 
             match getRegistryKeyHKLM "SOFTWARE\\Microsoft\\PowerShell\\1\\PowerShellEngine"  with
             |Some rKey -> getRegistryValue "PowerShellVersion" rKey
@@ -176,4 +160,53 @@
          poshTLog = pshellTLog
          poshMLog = pshellMLog
          poshSLog = pshellSLog
-         }
+         } |> Some
+
+
+    let getInternetSettings ()
+        : InternetSettings [] =
+        //The InternetSettings key is a standard Windows key, so I feel safe
+        //just yanking the value from the option.
+        let sSettings = 
+            let rKey = getRegistryKeyHKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" |> Option.get
+            let proxyServer = getRegistryValue "ProxyServer" rKey
+            let proxyOverride = getRegistryValue "ProxyOverride" rKey
+            let proxyEnable = getRegistryValue "ProxyEnable" rKey
+            {proxyServer = proxyServer; proxyOverride = proxyOverride; proxyEnable = proxyEnable}
+        let uSettings = 
+            let rKey = getRegistryKeyHKCU "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" |> Option.get
+            let proxyServer = getRegistryValue "ProxyServer" rKey
+            let proxyOverride = getRegistryValue "ProxyOverride" rKey
+            let proxyEnable = getRegistryValue "ProxyEnable" rKey
+            {proxyServer = proxyServer; proxyOverride = proxyOverride; proxyEnable = proxyEnable}
+        [|sSettings;uSettings|]
+
+
+    let getLSASettings ()
+        : LSASettings option =
+        //LSA registry key is a standard Windows key, so I feel safe just
+        //yanking the value from the option
+         
+        let rKey = getRegistryKeyHKLM "SYSTEM\\CurrentControlSet\\Control\\Lsa" |> Option.get
+        let lsaResults = 
+            lsaNames
+            |> Array.map(fun n -> 
+                getRegistryValue n rKey)
+        
+        {lsaPid = lsaResults.[0]
+         notificationPkgs = lsaResults.[1]
+         authorizationPkgs = lsaResults.[2]
+         prodType = lsaResults.[3]
+         limitBlankPwd = lsaResults.[4]
+         secureboot = lsaResults.[5]
+         disdomcreds = lsaResults.[6]
+         everyoneAnon = lsaResults.[7]
+         forceGuest = lsaResults.[8]
+         restrictAnon = lsaResults.[9]
+         restrictSAM = lsaResults.[10]
+         samConnAccnt = lsaResults.[11]
+         } |> Some
+
+        
+
+        

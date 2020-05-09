@@ -23,7 +23,7 @@
     //////////
     //Registry
     //////////
-
+    
     let getRegistryKey (hive: RegHive) (path: string) : RegistryKey option =
         //Because Windows, invalid Registry Keys return null instead of an 
         //error. So I have to do this awkward stuff because 'Some null' is,
@@ -64,13 +64,13 @@
                 rKey.GetSubKeyNames()
                 |> Array.filter(fun x -> not(x = null))
 
-
     let getRegistrySubKeyNamesHKCU = getRegistrySubKeyNames HKEY_CURRENT_USER
     let getRegistrySubKeyNamesHKU = getRegistrySubKeyNames HKEY_USER
     let getRegistrySubKeyNamesHKLM = getRegistrySubKeyNames HKEY_LOCAL_MACHINE
     
     
-    let getRegistryValue (name: string) (key: RegistryKey) : RegistryResult option =
+    let getRegistryValue 
+        (name: string) (key: RegistryKey) : RegistryResult option =
         //This doesn't take an RegistryKey option because I don't want to reach
         //this function with Nones. There's no point.
         let extractType 
@@ -92,6 +92,7 @@
         |Some rKind -> {name = name; value = extractType rKind rObj} |> Some
         |None -> None
 
+ 
     let collectHighIntegritySubKeysHKU (path: string) =
         getRegistrySubKeyNamesHKU ""
         |> Array.filter(fun x ->  x.StartsWith("S-1-5") && not (x.Contains("_Classes")))
@@ -100,8 +101,9 @@
             (HKEY_USER, path, getRegistrySubKeyNamesHKU fpath))
         |> Array.filter(fun f -> 
             let _, _, fs = f
-            not ( fs |> Array.isEmpty))
+            not (fs |> Array.isEmpty))
 
+ 
     let collectLowIntegritySubKeysHKCU (path: string) =
         match getRegistrySubKeyNamesHKCU path with
         | xa when xa.Length > 0 -> [|(HKEY_CURRENT_USER, path, xa)|]
@@ -112,13 +114,12 @@
         getRegistrySubKeyNames hive ""
         |> Array.filter(fun x ->  x.StartsWith("S-1-5") && not (x.Contains("_Classes")))
         |> Array.map(fun sidPath -> 
-            let fpath = sprintf "%s\\%s" sidPath path 
-            match getRegistryKeyHKU fpath with
+            match getRegistryKeyHKU (sidPath + "\\" + path) with
             |Some rKey -> (rKey, rKey.GetValueNames())
             |None -> (getThrowawayKey, [||]))
         |> Array.filter(fun f -> 
-            let _, fs = f
-            not ( fs |> Array.isEmpty))
+            not ( snd f |> Array.isEmpty))
+
 
     let collectLowIntegrityNames (hive: RegHive) (path: string) =
         match getRegistryKey hive path with

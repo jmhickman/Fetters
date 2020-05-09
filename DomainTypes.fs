@@ -184,6 +184,12 @@ module Fetters.DomainTypes
         environmentVal : string 
         }
 
+    type InternetSettings = {
+        proxyServer : RegistryResult option
+        proxyOverride : RegistryResult option
+        proxyEnable : RegistryResult option
+        }
+
     type LapsSettings = {
         lapsAdminAccountName : RegistryResult option
         lapsPasswordComplexity : RegistryResult option
@@ -198,18 +204,18 @@ module Fetters.DomainTypes
         }
 
     type LSASettings = {
-        lsaPid : uint16
-        notificationPkgs : string list
-        authorizationPkgs : string list 
-        prodType : uint8
-        limitBlankPwd : bool
-        secureboot : bool 
-        disdomcreds : bool 
-        everyoneAnon : bool 
-        forceGuest: bool 
-        restrictAnon : bool 
-        restrictSAM : bool 
-        samConnAccnt : bool 
+        lsaPid : RegistryResult option
+        notificationPkgs : RegistryResult option
+        authorizationPkgs : RegistryResult option
+        prodType : RegistryResult option
+        limitBlankPwd : RegistryResult option
+        secureboot : RegistryResult option
+        disdomcreds : RegistryResult option
+        everyoneAnon : RegistryResult option
+        forceGuest: RegistryResult option
+        restrictAnon : RegistryResult option
+        restrictSAM : RegistryResult option
+        samConnAccnt : RegistryResult option
         }
 
     type MappedDrive = {
