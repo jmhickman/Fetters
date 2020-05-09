@@ -18,35 +18,39 @@ open Fetters.Registry.Provider
 //queryWMI SAV |> List.iter(fun x -> printfn "%A" x) //no result, but didn't explode either
 //queryWMI SPatches |> List.iter(fun x -> printfn "%A" x) //
 
-(*let bindit = 
-    getRegistryValueHKCU "Software\Microsoft\BingASDS\BigAs" 
-    |> Option.map(fun key -> getRegistryValue "HotKeyStae" key)
-printfn "size of bindit: %b" bindit.IsNone
-match bindit with
-|Some x -> match x with | String y -> printfn "%s" y
-|None -> ()*)
 
 let laps = getLAPSSettings ()
-printfn "laps not present: %b" laps.IsNone
+printfn "%A\n" laps
 
 let autologon = getAutoLogonSettings ()
-printfn "Autologon not present: %b" autologon.IsNone
-printfn "%A" autologon
+printfn "%A\n" autologon
 
 let results =  getRDPSavedConnections ()
-printfn "%A" results
+printfn "%A\n" results
 
 let recents = getRecentRuncommands ()
-printfn "%A" recents
+printfn "%A\n" recents
 
 let uac = getUACSystemPolicies ()
-printfn "%A" uac
+printfn "%A\n" uac
 
 let psh = getPShellEnv ()
-printfn "%A" psh
+printfn "%A\n" psh
 
 let iss = getInternetSettings ()
-printfn "%A" iss
+printfn "%A\n" iss
 
 let lsa = getLSASettings ()
-printfn "%A" lsa
+printfn "%A\n" lsa
+
+let audit = getAuditSettings ()
+printfn "%A\n" audit
+
+let wef = getWEFSettings ()
+printfn "%A\n" wef
+
+let putty = getPuttySessions ()
+printfn "%A\n" putty
+
+let puttyh = getPuttyHostPublicKeys ()
+printfn "%A\n" puttyh

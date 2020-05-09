@@ -9,38 +9,6 @@ module Fetters.DomainTypes
     //Elementary types
     //////////////////
 
-    //// Credential types ////
-    type AWSCredential = {
-        username : string
-        password : string
-        }
-
-    type AzureCredential = {
-        username : string
-        password : string
-        }
-
-    type DPAPIBlob = {
-        username : string 
-        password : string 
-        }
-
-    type GoogleCredential = {
-        username : string 
-        password : string 
-        }
-
-    type NetworkCredential = {
-        username : string 
-        password : string 
-        }
-
-    type SSHCredential = {
-        username : string
-        key : string option
-        password : string option
-        }
-
     //// File Types ////
     type InterestingFile = {
         reason : string
@@ -129,13 +97,50 @@ module Fetters.DomainTypes
     // System Secret Types
     //////////////////////
 
+    //// Credential types ////
+    type AWSCredential = {
+        username : string
+        password : string
+        }
+
+    type AzureCredential = {
+        username : string
+        password : string
+        }
+
+    type DPAPIBlob = {
+        username : string 
+        password : string 
+        }
+
+    type GoogleCredential = {
+        username : string 
+        password : string 
+        }
+
+    type NetworkCredential = {
+        username : string 
+        password : string 
+        }
+
+    type PuttySSHSession = {
+        hostname : RegistryResult option
+        username : RegistryResult option
+        publicKeyFile : RegistryResult option
+        portForwardings : RegistryResult option
+        connectionSharing : RegistryResult option
+        }
+
+    type PuttyHostPublicKeys = {
+        recentHostKeys : RegistryResult option []
+        }
+
     type Credential = 
         |AWSCredential
         |AzureCredential
         |DPAPIBlob
         |GoogleCredential
         |NetworkCredential
-        |SSHCredential
 
     type File = 
         | Interesting_File
@@ -163,6 +168,9 @@ module Fetters.DomainTypes
     // System Static Attributes Types
     /////////////////////////////////
 
+    type AuditSettings = {
+        processauditing : RegistryResult option}
+
     type AutoLogonSettings = {
         defaultDomainName : RegistryResult option
         defaultUserName : RegistryResult option
@@ -171,7 +179,6 @@ module Fetters.DomainTypes
         altDefaultUserName : RegistryResult option
         altDefaultPassword : RegistryResult option
         }
-
 
     type AntiVirus = {
         engine : string
@@ -291,6 +298,11 @@ module Fetters.DomainTypes
          sid: string
          }
  
+    type WEFSettings = {
+        //Potentially huge keyspace makes anything more specific untenable
+        policies : RegistryResult option []
+        }
+
     type SystemStaticAttributes = {
         //autoruns : 
         environmentVars : EnvironmentVar list

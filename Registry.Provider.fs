@@ -6,57 +6,51 @@
 
     
     let getLAPSSettings () 
-        : LapsSettings option =
+        : LapsSettings =
         //Test to see if LAPS is present/configured, and if so, pull some data
         //Will return a None since we test if the key is even present first
-        match getRegistryKeyHKLM "Software\\Policies\\Microsoft Services\\AdmPwd" with
-        |Some rKey -> 
-            match getRegistryValue "AdmPwdEnabled" rKey with
-            |Some rVal -> //Yes, we don't use this value.
-                let result = {
-                    lapsAdminAccountName = getRegistryValue "AdminAccountName" rKey
-                    lapsPasswordComplexity = getRegistryValue "PasswordComplexity" rKey
-                    lapsPasswordLength = getRegistryValue "PasswordLength" rKey
-                    lapsPasswdProtection = getRegistryValue "PwdExpirationProtectionEnabled" rKey
-                    }
-                result |> Some
-            |None -> None
-        |None -> None
+        let rKey = 
+            match getRegistryKeyHKLM "Software\\Policies\\Microsoft Services\\AdmPwd" with
+            |Some rKey -> rKey
+            |None -> getThrowawayKey
+        {lapsAdminAccountName = getRegistryValue "AdminAccountName" rKey
+         lapsPasswordComplexity = getRegistryValue "PasswordComplexity" rKey
+         lapsPasswordLength = getRegistryValue "PasswordLength" rKey
+         lapsPasswdProtection = getRegistryValue "PwdExpirationProtectionEnabled" rKey
+        }
+        
 
-    
     let getAutoLogonSettings ()
-        : AutoLogonSettings option =
+        : AutoLogonSettings =
         //Test to see if any autologon settings exist on the system.
         //Will return a Some even if the contents are None, since this key is
         //a default Windows key.
-        match getRegistryKeyHKLM "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon" with
-        |Some rKey ->
-            let result = {
-                defaultDomainName = getRegistryValue "DefaultDomainName" rKey
-                defaultUserName = getRegistryValue "DefaultUserName" rKey
-                defaultPassword = getRegistryValue "DefaultPassword" rKey
-                altDefaultDomainName = getRegistryValue "AltDefaultDomainName" rKey
-                altDefaultUserName = getRegistryValue "AltDefaultUserName" rKey
-                altDefaultPassword = getRegistryValue "AltDefaultPassword" rKey
-                }
-            result |> Some
-        |None -> None
+        let rKey =     
+            match getRegistryKeyHKLM "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon" with
+            |Some rKey -> rKey
+            |None -> getThrowawayKey
+        {defaultDomainName = getRegistryValue "DefaultDomainName" rKey
+         defaultUserName = getRegistryValue "DefaultUserName" rKey
+         defaultPassword = getRegistryValue "DefaultPassword" rKey
+         altDefaultDomainName = getRegistryValue "AltDefaultDomainName" rKey
+         altDefaultUserName = getRegistryValue "AltDefaultUserName" rKey
+         altDefaultPassword = getRegistryValue "AltDefaultPassword" rKey
+         }
 
 
     let listSysmonconfig ()
-        : SysmonConfig option =
+        : SysmonConfig =
         //Test to see if any Sysmon config is present on the system.
         //Will return a None if the relevant key is absent
-        match getRegistryKeyHKLM "SYSTEM\\CurrentControlSet\\Services\\SysmonDrv\\Parameters" with
-        |Some rKey ->
-            let result = {
-                hashingAlgorithm = getRegistryValue "HashingAlgorithm" rKey
-                options = getRegistryValue "Options" rKey
-                rules = getRegistryValue "Rules" rKey
-                }
-            result |> Some
-        |None -> None
-
+        let rKey = 
+            match getRegistryKeyHKLM "SYSTEM\\CurrentControlSet\\Services\\SysmonDrv\\Parameters" with
+            |Some rKey -> rKey
+            |None -> getThrowawayKey
+        {hashingAlgorithm = getRegistryValue "HashingAlgorithm" rKey
+         options = getRegistryValue "Options" rKey
+         rules = getRegistryValue "Rules" rKey
+         }
+        
 
     let getRDPSavedConnections ()
         : RDPSavedConnection [] =
@@ -106,7 +100,7 @@
 
 
     let getUACSystemPolicies ()
-        : UACPolicies option =
+        : UACPolicies =
         let uacKey = 
            match getRegistryKeyHKLM "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System"  with
            |Some rKey -> rKey
@@ -121,11 +115,11 @@
          enableLUA = enableLUA
          localAccountTokenFilterPolicy = localAccounttokenFilterPolicy
          filterAdministratorToken = filterAdministratorToken
-         } |> Some
+         }
 
 
     let getPShellEnv () 
-        : PowerShellEnv option =
+        : PowerShellEnv =
         let pshellver2 = 
             match getRegistryKeyHKLM "SOFTWARE\\Microsoft\\PowerShell\\1\\PowerShellEngine"  with
             |Some rKey -> getRegistryValue "PowerShellVersion" rKey
@@ -160,7 +154,7 @@
          poshTLog = pshellTLog
          poshMLog = pshellMLog
          poshSLog = pshellSLog
-         } |> Some
+         }
 
 
     let getInternetSettings ()
@@ -183,7 +177,7 @@
 
 
     let getLSASettings ()
-        : LSASettings option =
+        : LSASettings =
         //LSA registry key is a standard Windows key, so I feel safe just
         //yanking the value from the option
          
@@ -205,8 +199,65 @@
          restrictAnon = lsaResults.[9]
          restrictSAM = lsaResults.[10]
          samConnAccnt = lsaResults.[11]
-         } |> Some
+         }
 
-        
 
+    let getAuditSettings () : AuditSettings = 
+        //This registry key is a standard Windows key, so I feel safe just
+        //yanking the value from the option. I couldn't find any sort of
+        //decent list of posible Audit values, so I'm checking for just the
+        //one I found.
+        let rKey = 
+            getRegistryKeyHKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\Audit"
+            |> Option.get
+        {processauditing = getRegistryValue "ProcessCreationIncludeCmdLine_Enabled" rKey}
+
+
+    let getWEFSettings () : WEFSettings = 
+        //Just bulk grabbing crap. Huge potential list of results.
+        let names = 
+            collectLowIntegrityNames HKEY_LOCAL_MACHINE "Software\\Policies\\Microsoft\\Windows\\EventLog\\EventForwarding\\SubscriptionManager"
+        let results = 
+            names
+            |> Array.map(fun tu ->
+                let rKey, pArray = tu
+                pArray
+                |> Array.map(fun p -> getRegistryValue p rKey))
+            |> Array.reduce Array.append
+        {policies = results}
+
+
+    let getPuttySessions () : PuttySSHSession [] = 
+        let subkeys = 
+            match isHighIntegrity with
+            |true -> collectHighIntegritySubKeysHKU "Software\\SimonTatham\\PuTTY\\Sessions"
+            |false -> collectLowIntegritySubKeysHKCU "Software\\SimonTatham\\PuTTY\\Sessions"
+
+        subkeys
+        |> Array.map(fun tu ->
+            let hive, path, pArray = tu
+            let rKeyO = getRegistryKey hive path
+            let rKey =     
+                match rKeyO with
+                |Some rKey -> rKey
+                |None -> getThrowawayKey
+            puttySessionNames
+            |> Array.map(fun psn -> getRegistryValue psn rKey))
+            |> Array.map(fun x -> 
+                {hostname = x.[0]; username = x.[1]; publicKeyFile = x.[2]; portForwardings = x.[3]; connectionSharing = x.[4]})
+    
+
+    let getPuttyHostPublicKeys () : PuttyHostPublicKeys [] =
+        let names = 
+            match isHighIntegrity with
+            |true -> collectHighIntegrityNames HKEY_USER "Software\\SimonTatham\\PuTTY\\SshHostKeys"
+            |false -> collectLowIntegrityNames HKEY_CURRENT_USER "Software\\SimonTatham\\PuTTY\\SshHostKeys"
         
+        names
+        |> Array.map(fun tu ->
+            let rKey, pArray = tu
+            pArray
+            |> Array.map(fun p -> getRegistryValue p rKey))
+        |> Array.map(fun x -> {recentHostKeys = x} )
+
+            

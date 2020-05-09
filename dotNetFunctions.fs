@@ -108,7 +108,9 @@
         match getRegistrySubKeyNamesHKCU path with
         | xa when xa.Length > 0 -> [|(HKEY_CURRENT_USER, path, xa)|]
         | _ -> [|(HKEY_CURRENT_USER, path, [||])|]
-    
+        |> Array.filter(fun f -> 
+            let _, _, fs = f
+            not(fs |> Array.isEmpty))
     
     let collectHighIntegrityNames (hive: RegHive) (path: string) =
         getRegistrySubKeyNames hive ""
