@@ -63,3 +63,14 @@
         "PortForwardings"
         "ConnectionSharing"
         |]
+
+    let autorunLocations = [|
+        "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
+        "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce"
+        "SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Run"
+        "SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\RunOnce"
+        "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunService"
+        "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnceService"
+        "SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\RunService"
+        "SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\RunOnceService"
+        |]

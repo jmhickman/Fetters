@@ -26,9 +26,13 @@ printfn "%A\n" laps
 
 printfn "===================AUTOLOGON SETTINGS===================="
 let autologon = getAutoLogonSettings ()
-printfn "%A\n" autologon
+printfn "%A\n" autologon*)
 
-printfn "================RDP CONNECTION USERNAMES================="
+printfn "===================AUTORUN SETTINGS====================="
+let autorun = getAutoRunValues ()
+printfn "%A\n" autorun
+
+(*printfn "================RDP CONNECTION USERNAMES================="
 let results =  getRDPSavedConnections ()
 printfn "%A\n" results
 

@@ -180,6 +180,11 @@ module Fetters.DomainTypes
         altDefaultPassword : RegistryResult option
         }
 
+    type AutorunSetting = {
+        location : string
+        value : RegistryResult option
+        }
+    
     type AntiVirus = {
         engine : string
         productExe : string

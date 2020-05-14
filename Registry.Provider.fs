@@ -35,6 +35,19 @@
          }
 
 
+    //// AutoRun Enum ////
+    let getAutoRunValues () = 
+        autorunLocations
+        |> Array.map(fun s -> retrieveNamesByIntegrity HKEY_USER HKEY_CURRENT_USER s)
+        |> Array.concat
+        |> Array.map(fun tu -> 
+            let rKey, pArray = tu
+            pArray |> Array.map(fun p -> {location = rKey.Name; value = getRegistryValue p rKey }))
+        |> Array.concat
+        
+        
+
+
     //// Sysmon Config Enum
     let listSysmonconfig () : SysmonConfig =
         //Test to see if any Sysmon config is present on the system.
