@@ -1,18 +1,16 @@
 ﻿module Fetters.Registry.Provider
 
+    open Microsoft.Win32
     open Fetters.Lists
     open Fetters.dotNet.Common
     open Fetters.DomainTypes
 
     
-    let getLAPSSettings () 
-        : LapsSettings =
+    let getLAPSSettings () : LapsSettings =
         //Test to see if LAPS is present/configured, and if so, pull some data
         //Will return a None since we test if the key is even present first
-        let rKey = 
-            match getRegistryKeyHKLM "Software\\Policies\\Microsoft Services\\AdmPwd" with
-            |Some rKey -> rKey
-            |None -> getThrowawayKey
+        let rKey = extractRegistryKey <| getRegistryKeyHKLM "Software\\Policies\\Microsoft Services\\AdmPwd"
+        
         {lapsAdminAccountName = getRegistryValue "AdminAccountName" rKey
          lapsPasswordComplexity = getRegistryValue "PasswordComplexity" rKey
          lapsPasswordLength = getRegistryValue "PasswordLength" rKey
@@ -20,15 +18,12 @@
         }
         
 
-    let getAutoLogonSettings ()
-        : AutoLogonSettings =
+    let getAutoLogonSettings () : AutoLogonSettings =
         //Test to see if any autologon settings exist on the system.
         //Will return a Some even if the contents are None, since this key is
         //a default Windows key.
-        let rKey =     
-            match getRegistryKeyHKLM "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon" with
-            |Some rKey -> rKey
-            |None -> getThrowawayKey
+        let rKey = extractRegistryKey <| getRegistryKeyHKLM "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon"
+        
         {defaultDomainName = getRegistryValue "DefaultDomainName" rKey
          defaultUserName = getRegistryValue "DefaultUserName" rKey
          defaultPassword = getRegistryValue "DefaultPassword" rKey
@@ -38,74 +33,57 @@
          }
 
 
-    let listSysmonconfig ()
-        : SysmonConfig =
+    let listSysmonconfig () : SysmonConfig =
         //Test to see if any Sysmon config is present on the system.
         //Will return a None if the relevant key is absent
-        let rKey = 
-            match getRegistryKeyHKLM "SYSTEM\\CurrentControlSet\\Services\\SysmonDrv\\Parameters" with
-            |Some rKey -> rKey
-            |None -> getThrowawayKey
+        let rKey = extractRegistryKey <| getRegistryKeyHKLM "SYSTEM\\CurrentControlSet\\Services\\SysmonDrv\\Parameters" 
+            
         {hashingAlgorithm = getRegistryValue "HashingAlgorithm" rKey
          options = getRegistryValue "Options" rKey
          rules = getRegistryValue "Rules" rKey
          }
         
 
-    let getRDPSavedConnections ()
-        : RDPSavedConnection [] =
-        //Performs differently if running high or low integrity.
-                    
-        let rArray = 
-            match isHighIntegrity with
-            |true -> collectHighIntegritySubKeysHKU "Software\\Microsoft\\Terminal Server Client\\Servers"
-            |false -> collectLowIntegritySubKeysHKCU "Software\\Microsoft\\Terminal Server Client\\Servers"
-        
-        let uArray = 
-            rArray 
-            |> Array.map(fun tu ->
-                let hive, path, pArray = tu
-                pArray 
-                |> Array.map(fun p ->
-                    match getRegistryKey hive (path + "\\" + p) with
-                    |Some rKey -> {host = p; usernameHint = getRegistryValue "UsernameHint" rKey}
-                    |None -> {host = ""; usernameHint = None}
-                    ))
-                
-        match uArray.Length with
-        |x when x > 0 -> uArray |> Array.reduce Array.append
-        |_ -> [||]
-            
+    let private getRDPSavedConnectionsNames ()  : (RegHive * string * string []) [] =
+        retrieveSubKeysByIntegrity "Software\\Microsoft\\Terminal Server Client\\Servers"
         
     
-    let getRecentRuncommands ()
-     : RecentCommand [] =
+    let private getRDPSavedConnection (hive:RegHive) (path: string) (p: string) : RDPSavedConnection =
+        let rKey = getRegistryKey hive (path + "\\" + p) |> extractRegistryKey
+        {host = p; usernameHint = getRegistryValue "UsernameHint" rKey}
+            
+
+    let getRDPSavedConnections () =
+        //Retrieves RDP connection info from the registry.
+        getRDPSavedConnectionsNames ()
+        |> Array.map(fun tuple ->
+            let hive, path, pArray = tuple
+            pArray
+            |> Array.map(fun p -> getRDPSavedConnection hive path p))
+
+        
+    let private getRecentRuncommandsNames () : (RegistryKey * string []) [] =  
     // MRU for all users if high integrity, current user otherwise
-        let rArray = 
-            match isHighIntegrity with
-            |true -> collectHighIntegrityNames HKEY_USER "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU"
-            |false -> collectLowIntegrityNames HKEY_CURRENT_USER "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU"
+        retrieveNamesByIntegrity HKEY_USER HKEY_CURRENT_USER "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU"
         
-        let uArray =
-            rArray
-            |> Array.map(fun tu ->
-                let rKey, pArray = tu
-                pArray
-                |> Array.filter(fun f -> not(f = "MRUList")) //We don't care
-                |> Array.map(fun p -> {recentCommand = getRegistryValue p rKey}))
-                    
-        match uArray.Length with
-        |x when x > 0 -> uArray |> Array.reduce Array.append
-        |_ -> [||]
+  
+    let private getRecentRuncommand (rKey: RegistryKey) (p: string) : RecentCommand =
+        {recentCommand = getRegistryValue p rKey}
+  
+  
+    let getRecentCommands () =
+        //Retrieves Recent `run` commands (Win+R) from the registry
+        getRecentRuncommandsNames () 
+        |> Array.map(fun tuple -> 
+            let rKey, pArray = tuple
+            pArray 
+            |> Array.filter(fun f -> not(f = "MRUList")) 
+            |> Array.map(fun p -> getRecentRuncommand rKey p ))
+        |> Array.concat
 
-
-    let getUACSystemPolicies ()
-        : UACPolicies =
-        let uacKey = 
-           match getRegistryKeyHKLM "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System"  with
-           |Some rKey -> rKey
-           |None -> getThrowawayKey
         
+    let getUACSystemPolicies () : UACPolicies =
+        let uacKey = extractRegistryKey <| getRegistryKeyHKLM "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System"
         let consentPromptBehavior = getRegistryValue "ConsentPromptBehaviorAdmin" uacKey
         let enableLUA = getRegistryValue "EnableLUA" uacKey 
         let localAccounttokenFilterPolicy = getRegistryValue "LocalAccounttokenFilterPolicy" uacKey
@@ -118,35 +96,29 @@
          }
 
 
-    let getPShellEnv () 
-        : PowerShellEnv =
-        let pshellver2 = 
-            match getRegistryKeyHKLM "SOFTWARE\\Microsoft\\PowerShell\\1\\PowerShellEngine"  with
-            |Some rKey -> getRegistryValue "PowerShellVersion" rKey
-            |None -> None
-        let pshellver5 = 
-            match getRegistryKeyHKLM "SOFTWARE\\Microsoft\\PowerShell\\3\\PowerShellEngine"  with
-            |Some rKey -> getRegistryValue "PowerShellVersion" rKey
-            |None -> None
-        
+    let getPShellEnv () : PowerShellEnv =
+        let rKey2 = getRegistryKeyHKLM "SOFTWARE\\Microsoft\\PowerShell\\1\\PowerShellEngine" |> extractRegistryKey
+        let pshellver2 = getRegistryValue "PowerShellVersion" rKey2
+        let rKey5 = getRegistryKeyHKLM "SOFTWARE\\Microsoft\\PowerShell\\3\\PowerShellEngine" |> extractRegistryKey
+        let pshellver5 = getRegistryValue "PowerShellVersion" rKey5
         let pshellTLog = 
             collectLowIntegrityNames HKEY_LOCAL_MACHINE "SOFTWARE\\Policies\\Microsoft\\Windows\\PowerShell\\Transcription"
             |> Array.map(fun (rKey, pArray) -> 
                 pArray
                 |> Array.map(fun p -> getRegistryValue p rKey))
-                |> Array.reduce Array.append
+                |> Array.concat
         let pshellMLog = 
             collectLowIntegrityNames HKEY_LOCAL_MACHINE "SOFTWARE\\Policies\\Microsoft\\Windows\\PowerShell\\ModuleLogging"
             |> Array.map(fun (rKey, pArray) -> 
                 pArray
                 |> Array.map(fun p -> getRegistryValue p rKey))
-                |> Array.reduce Array.append
+                |> Array.concat
         let pshellSLog = 
             collectLowIntegrityNames HKEY_LOCAL_MACHINE "SOFTWARE\\Policies\\Microsoft\\Windows\\PowerShell\\ScriptBlockLogging"
             |> Array.map(fun (rKey, pArray) -> 
                 pArray
                 |> Array.map(fun p -> getRegistryValue p rKey))
-                |> Array.reduce Array.append
+                |> Array.concat
 
         {
          poshVersion2 = pshellver2
@@ -157,31 +129,26 @@
          }
 
 
-    let getInternetSettings ()
-        : InternetSettings [] =
-        //The InternetSettings key is a standard Windows key, so I feel safe
-        //just yanking the value from the option.
-        let sSettings = 
-            let rKey = getRegistryKeyHKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" |> Option.get
-            let proxyServer = getRegistryValue "ProxyServer" rKey
-            let proxyOverride = getRegistryValue "ProxyOverride" rKey
-            let proxyEnable = getRegistryValue "ProxyEnable" rKey
-            {proxyServer = proxyServer; proxyOverride = proxyOverride; proxyEnable = proxyEnable}
-        let uSettings = 
-            let rKey = getRegistryKeyHKCU "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" |> Option.get
-            let proxyServer = getRegistryValue "ProxyServer" rKey
-            let proxyOverride = getRegistryValue "ProxyOverride" rKey
-            let proxyEnable = getRegistryValue "ProxyEnable" rKey
-            {proxyServer = proxyServer; proxyOverride = proxyOverride; proxyEnable = proxyEnable}
-        [|sSettings;uSettings|]
+    let getSystemInternetSettings () : InternetSettings =
+        let rKey = getRegistryKeyHKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" |> extractRegistryKey
+        
+        {proxyServer = getRegistryValue "ProxyServer" rKey
+         proxyOverride = getRegistryValue "ProxyOverride" rKey
+         proxyEnable = getRegistryValue "ProxyEnable" rKey
+        }
+    
+
+    let getUserInternetSettings () : InternetSettings =
+        let rKey = getRegistryKeyHKCU "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" |> extractRegistryKey
+            
+        {proxyServer = getRegistryValue "ProxyServer" rKey
+         proxyOverride = getRegistryValue "ProxyOverride" rKey
+         proxyEnable = getRegistryValue "ProxyEnable" rKey
+        }
 
 
-    let getLSASettings ()
-        : LSASettings =
-        //LSA registry key is a standard Windows key, so I feel safe just
-        //yanking the value from the option
-         
-        let rKey = getRegistryKeyHKLM "SYSTEM\\CurrentControlSet\\Control\\Lsa" |> Option.get
+    let getLSASettings () : LSASettings  =
+        let rKey = getRegistryKeyHKLM "SYSTEM\\CurrentControlSet\\Control\\Lsa" |> extractRegistryKey
         let lsaResults = 
             lsaNames
             |> Array.map(fun n -> 
@@ -203,13 +170,11 @@
 
 
     let getAuditSettings () : AuditSettings = 
-        //This registry key is a standard Windows key, so I feel safe just
-        //yanking the value from the option. I couldn't find any sort of
-        //decent list of posible Audit values, so I'm checking for just the
-        //one I found.
+        //I couldn't find any sort of decent list of posible Audit values, so
+        //I'm checking for just the one I found.
         let rKey = 
             getRegistryKeyHKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\Audit"
-            |> Option.get
+            |> extractRegistryKey
         {processauditing = getRegistryValue "ProcessCreationIncludeCmdLine_Enabled" rKey}
 
 
@@ -227,37 +192,44 @@
         {policies = results}
 
 
-    let getPuttySessions () : PuttySSHSession [] = 
-        let subkeys = 
-            match isHighIntegrity with
-            |true -> collectHighIntegritySubKeysHKU "Software\\SimonTatham\\PuTTY\\Sessions"
-            |false -> collectLowIntegritySubKeysHKCU "Software\\SimonTatham\\PuTTY\\Sessions"
+    let private getPuttySessionKeys () : (RegHive * string * string) [] = 
+        let subKeysT = retrieveSubKeysByIntegrity "Software\\SimonTatham\\PuTTY\\Sessions"
+        subKeysT
+        |> Array.map(fun tu -> 
+            let hive, path, pArray = tu 
+            pArray |> Array.map(fun p -> hive, path, p))
+        |> Array.concat
 
-        subkeys
-        |> Array.map(fun tu ->
-            let hive, path, pArray = tu
-            let rKeyO = getRegistryKey hive path
-            let rKey =     
-                match rKeyO with
-                |Some rKey -> rKey
-                |None -> getThrowawayKey
-            puttySessionNames
-            |> Array.map(fun psn -> getRegistryValue psn rKey))
-            |> Array.map(fun x -> 
-                {hostname = x.[0]; username = x.[1]; publicKeyFile = x.[2]; portForwardings = x.[3]; connectionSharing = x.[4]})
     
+    let private getPuttySessionValue (hive:RegHive, path: string, name:string ) : PuttySSHSession = 
+        let rKey = getRegistryKey hive (path + "\\" + name)
+        let key = extractRegistryKey rKey
+        let results = 
+            puttySessionNames
+            |> Array.map(fun p -> getRegistryValue p key)
+        {hostname = results.[0]; username = results.[1]; publicKeyFile = results.[2]; portForwardings = results.[3]; connectionSharing = results.[4]}
+         
 
-    let getPuttyHostPublicKeys () : PuttyHostPublicKeys [] =
+    let getPuttySessionCollection () = getPuttySessionKeys () |> Array.map(fun x -> getPuttySessionValue x)
+
+    let private getPuttyHostPublickeyNames () : (RegistryKey * string) [] =
+    //The intention here is to call this to get paths/names to feed to the next
+    //function, rather than that function returning a list. Prevents really
+    //stupid-looking function signatures.
         let names = 
             match isHighIntegrity with
             |true -> collectHighIntegrityNames HKEY_USER "Software\\SimonTatham\\PuTTY\\SshHostKeys"
             |false -> collectLowIntegrityNames HKEY_CURRENT_USER "Software\\SimonTatham\\PuTTY\\SshHostKeys"
-        
         names
-        |> Array.map(fun tu ->
-            let rKey, pArray = tu
-            pArray
-            |> Array.map(fun p -> getRegistryValue p rKey))
-        |> Array.map(fun x -> {recentHostKeys = x} )
+        |> Array.map(fun tu -> 
+            let key, pArray = tu
+            pArray |> Array.map(fun p ->  key, p))
+        |> Array.concat
+        
+    
+    let private getPuttyHostPublickeyValue (rKey: RegistryKey, name: string) : PuttyHostPublicKeys =
+        let result = getRegistryValue name rKey
+        {recentHostKeys = result}
 
-            
+
+    let getPuttyHostPublickeyCollection () = getPuttyHostPublickeyNames () |> Array.map(fun x -> getPuttyHostPublickeyValue x)        

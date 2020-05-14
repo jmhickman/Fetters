@@ -132,7 +132,7 @@ module Fetters.DomainTypes
         }
 
     type PuttyHostPublicKeys = {
-        recentHostKeys : RegistryResult option []
+        recentHostKeys : RegistryResult option
         }
 
     type Credential = 

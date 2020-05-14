@@ -928,7 +928,7 @@
     // Local Group Enumeration
     //////////////////////////
 
-    let populateGroupMemberStruct 
+    let private populateGroupMemberStruct 
         (bufferPtr: IntPtr) 
         (entriesRead: int) =
         // Helper function for populating the LOCAL_GROUP_MEMBER structs
@@ -1058,7 +1058,7 @@
         LsaFreeReturnBuffer(&_handle) |> ignore
 
 
-    let closeLsaH (ptr) =
+    let private closeLsaH (ptr) =
         let mutable ptr = ptr
         LsaFreeReturnBuffer(&ptr) |> ignore
 
@@ -1360,7 +1360,7 @@
     //Credential Vault
     //////////////////
 
-    let enumerateVaults () 
+    let private enumerateVaults () 
         : (int32 * VaultGuid) =
         let mutable countOfVaults = 0
         let mutable vaultGuid = IntPtr.Zero
@@ -1369,7 +1369,7 @@
         (countOfVaults, vaultGuid |> VaultGuid)
         
 
-    let openVault 
+    let private openVault 
         (count: int32, vaultGuid: VaultGuid) 
         : VaultHandle list = 
         let  mutable (VaultGuid vaultGuidPtr) = vaultGuid
@@ -1383,7 +1383,7 @@
             vaultHandle|> VaultHandle)
 
 
-    let enumerateVaultItems 
+    let private enumerateVaultItems 
         (vaultHandle: VaultHandle) 
         : (VaultHandle * VaultItem list) =
         let mutable (VaultHandle vaultHandle) = vaultHandle
@@ -1406,7 +1406,7 @@
         (vaultHandle |> VaultHandle, vaultItems)
 
     
-    let getVaultElementContent
+    let private getVaultElementContent
         (element: IntPtr)
         : string option =
         match element with
@@ -1483,11 +1483,19 @@
                     }
                 vaultRecord)
 
+
+    let enumerateAllVaults () =
+        enumerateVaults ()
+        |> openVault 
+        |> List.map(fun v -> enumerateVaultItems v)
+        |> List.map(fun v -> createVaultRecord v)
+
+
     ////////////////////////////
     //TCP Connection Enumeration
     ////////////////////////////
 
-    let getServiceNameInfo 
+    let private getServiceNameInfo 
         (pid: uint32) 
         (serviceTag: uint32) 
         : string option =
@@ -1499,7 +1507,7 @@
         | _ -> None
 
 
-    let getTcpTable () : IntPtr option = 
+    let private getTcpTable () : IntPtr option = 
         let mutable tableBufferSize = 0u
         let mutable tablePtr = IntPtr.Zero
 
@@ -1514,7 +1522,7 @@
                None
 
 
-    let getTcpTableRows 
+    let private getTcpTableRows 
         (tablePtr: IntPtr option) 
         : MIB_TCPROW_OWNER_MODULE list =
         let rowList = 
@@ -1548,6 +1556,11 @@
             service = getServiceNameInfo tcpRow.OwningPid (uint32(tcpRow.OwningModuleInfo0))
             }
         tcpConnection
+
+    let enumerateTCPConnections () =
+        getTcpTable () 
+        |> getTcpTableRows 
+        |> List.map(fun x -> createTCPRecord x)
 
     ///////////////////////////
     //UDP conection enumeration
@@ -1601,6 +1614,10 @@
         udpListener
 
 
+    let enumerateUDPConnections () =
+        getUdpTable () 
+        |> getUdpTableRows 
+        |> List.map(fun x -> createUdpRecord x)
 
     ///////////////////////
     //Arp Table Enumeration
