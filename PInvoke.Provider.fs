@@ -1,4 +1,4 @@
-﻿module Fetters.NI.Providers
+﻿module Fetters.PInvoke.Provider
 
     open System
     open System.Diagnostics

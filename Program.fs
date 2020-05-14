@@ -2,7 +2,7 @@
 open System.Management
 
 open Fetters.DomainTypes 
-open Fetters.NI.Providers
+open Fetters.PInvoke.Provider
 open Fetters.WMI.Providers
 open Fetters.dotNet.Common
 open Fetters.Registry.Provider

@@ -36,7 +36,7 @@
 
 
     //// AutoRun Enum ////
-    let getAutoRunValues () = 
+    let getAutoRunValues () : AutorunSetting [] = 
         autorunLocations
         |> Array.map(fun s -> retrieveNamesByIntegrity HKEY_USER HKEY_CURRENT_USER s)
         |> Array.concat
@@ -44,9 +44,7 @@
             let rKey, pArray = tu
             pArray |> Array.map(fun p -> {location = rKey.Name; value = getRegistryValue p rKey }))
         |> Array.concat
-        
-        
-
+ 
 
     //// Sysmon Config Enum
     let listSysmonconfig () : SysmonConfig =
@@ -61,7 +59,7 @@
         
 
     //// RDP Saved Connection Enum ////
-    let private getRDPSavedConnectionsNames ()  : (RegHive * string * string []) [] =
+    let private getRDPSavedConnectionsNames ()  : (RegHive * string * string [])[] =
         retrieveSubKeysByIntegrity "Software\\Microsoft\\Terminal Server Client\\Servers"
         
     
@@ -80,7 +78,7 @@
 
 
     //// MRU Commands Enum ////         
-    let private getRecentRuncommandsNames () : (RegistryKey * string []) [] =  
+    let private getRecentRuncommandsNames () : (RegistryKey * string [])[] =  
         retrieveNamesByIntegrity HKEY_USER HKEY_CURRENT_USER "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU"
         
   
@@ -214,7 +212,7 @@
 
 
     //// PuTTY Session Enumeration ////
-    let private getPuttySessionKeys () : (RegHive * string * string) [] = 
+    let private getPuttySessionKeys () : (RegHive * string * string)[] = 
         let subKeysT = retrieveSubKeysByIntegrity "Software\\SimonTatham\\PuTTY\\Sessions"
         subKeysT
         |> Array.map(fun tu -> 
@@ -237,7 +235,7 @@
 
 
     //// PuTTY Hostkey Enum ////
-    let private getPuttyHostPublickeyNames () : (RegistryKey * string) [] =
+    let private getPuttyHostPublickeyNames () : (RegistryKey * string)[] =
         let names = retrieveNamesByIntegrity HKEY_USER HKEY_CURRENT_USER "Software\\SimonTatham\\PuTTY\\SshHostKeys"
         names
         |> Array.map(fun tu -> 
