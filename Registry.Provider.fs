@@ -5,7 +5,8 @@
     open Fetters.dotNet.Common
     open Fetters.DomainTypes
 
-    
+
+    //// Local Administrator Password Solution Enum ////
     let getLAPSSettings () : LapsSettings =
         //Test to see if LAPS is present/configured, and if so, pull some data
         //Will return a None since we test if the key is even present first
@@ -18,6 +19,7 @@
         }
         
 
+    //// Windows Automatic Logon Enum ////
     let getAutoLogonSettings () : AutoLogonSettings =
         //Test to see if any autologon settings exist on the system.
         //Will return a Some even if the contents are None, since this key is
@@ -33,6 +35,7 @@
          }
 
 
+    //// Sysmon Config Enum
     let listSysmonconfig () : SysmonConfig =
         //Test to see if any Sysmon config is present on the system.
         //Will return a None if the relevant key is absent
@@ -44,6 +47,7 @@
          }
         
 
+    //// RDP Saved Connection Enum ////
     let private getRDPSavedConnectionsNames ()  : (RegHive * string * string []) [] =
         retrieveSubKeysByIntegrity "Software\\Microsoft\\Terminal Server Client\\Servers"
         
@@ -61,18 +65,17 @@
             pArray
             |> Array.map(fun p -> getRDPSavedConnection hive path p))
 
-        
+
+    //// MRU Commands Enum ////         
     let private getRecentRuncommandsNames () : (RegistryKey * string []) [] =  
-    // MRU for all users if high integrity, current user otherwise
         retrieveNamesByIntegrity HKEY_USER HKEY_CURRENT_USER "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU"
         
   
     let private getRecentRuncommand (rKey: RegistryKey) (p: string) : RecentCommand =
         {recentCommand = getRegistryValue p rKey}
   
-  
+ 
     let getRecentCommands () =
-        //Retrieves Recent `run` commands (Win+R) from the registry
         getRecentRuncommandsNames () 
         |> Array.map(fun tuple -> 
             let rKey, pArray = tuple
@@ -82,6 +85,7 @@
         |> Array.concat
 
         
+    //// UAC Policy Enum ////
     let getUACSystemPolicies () : UACPolicies =
         let uacKey = extractRegistryKey <| getRegistryKeyHKLM "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System"
         let consentPromptBehavior = getRegistryValue "ConsentPromptBehaviorAdmin" uacKey
@@ -96,10 +100,11 @@
          }
 
 
+    //// PowerShell Environment Enum ////
     let getPShellEnv () : PowerShellEnv =
-        let rKey2 = getRegistryKeyHKLM "SOFTWARE\\Microsoft\\PowerShell\\1\\PowerShellEngine" |> extractRegistryKey
+        let rKey2 = extractRegistryKey <| getRegistryKeyHKLM "SOFTWARE\\Microsoft\\PowerShell\\1\\PowerShellEngine" 
         let pshellver2 = getRegistryValue "PowerShellVersion" rKey2
-        let rKey5 = getRegistryKeyHKLM "SOFTWARE\\Microsoft\\PowerShell\\3\\PowerShellEngine" |> extractRegistryKey
+        let rKey5 = extractRegistryKey <| getRegistryKeyHKLM "SOFTWARE\\Microsoft\\PowerShell\\3\\PowerShellEngine" 
         let pshellver5 = getRegistryValue "PowerShellVersion" rKey5
         let pshellTLog = 
             collectLowIntegrityNames HKEY_LOCAL_MACHINE "SOFTWARE\\Policies\\Microsoft\\Windows\\PowerShell\\Transcription"
@@ -129,8 +134,9 @@
          }
 
 
+    //// System/User Proxy Settings Enum ////
     let getSystemInternetSettings () : InternetSettings =
-        let rKey = getRegistryKeyHKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" |> extractRegistryKey
+        let rKey = extractRegistryKey <| getRegistryKeyHKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings"  
         
         {proxyServer = getRegistryValue "ProxyServer" rKey
          proxyOverride = getRegistryValue "ProxyOverride" rKey
@@ -139,7 +145,7 @@
     
 
     let getUserInternetSettings () : InternetSettings =
-        let rKey = getRegistryKeyHKCU "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" |> extractRegistryKey
+        let rKey = extractRegistryKey <| getRegistryKeyHKCU "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" 
             
         {proxyServer = getRegistryValue "ProxyServer" rKey
          proxyOverride = getRegistryValue "ProxyOverride" rKey
@@ -147,8 +153,9 @@
         }
 
 
+    //// LSA Status Enum ////
     let getLSASettings () : LSASettings  =
-        let rKey = getRegistryKeyHKLM "SYSTEM\\CurrentControlSet\\Control\\Lsa" |> extractRegistryKey
+        let rKey = extractRegistryKey <| getRegistryKeyHKLM "SYSTEM\\CurrentControlSet\\Control\\Lsa" 
         let lsaResults = 
             lsaNames
             |> Array.map(fun n -> 
@@ -169,15 +176,16 @@
          }
 
 
+    //// Windows Audit Settings Enum ////
     let getAuditSettings () : AuditSettings = 
         //I couldn't find any sort of decent list of posible Audit values, so
         //I'm checking for just the one I found.
-        let rKey = 
-            getRegistryKeyHKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\Audit"
-            |> extractRegistryKey
+        let rKey = extractRegistryKey <| getRegistryKeyHKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\Audit"
+            
         {processauditing = getRegistryValue "ProcessCreationIncludeCmdLine_Enabled" rKey}
 
 
+    //// Windows Event Forwarding Enum ////
     let getWEFSettings () : WEFSettings = 
         //Just bulk grabbing crap. Huge potential list of results.
         let names = 
@@ -188,10 +196,11 @@
                 let rKey, pArray = tu
                 pArray
                 |> Array.map(fun p -> getRegistryValue p rKey))
-            |> Array.reduce Array.append
+            |> Array.concat
         {policies = results}
 
 
+    //// PuTTY Session Enumeration ////
     let private getPuttySessionKeys () : (RegHive * string * string) [] = 
         let subKeysT = retrieveSubKeysByIntegrity "Software\\SimonTatham\\PuTTY\\Sessions"
         subKeysT
@@ -209,17 +218,14 @@
             |> Array.map(fun p -> getRegistryValue p key)
         {hostname = results.[0]; username = results.[1]; publicKeyFile = results.[2]; portForwardings = results.[3]; connectionSharing = results.[4]}
          
+    
+    let getPuttySessionCollection () = 
+        getPuttySessionKeys () |> Array.map getPuttySessionValue
 
-    let getPuttySessionCollection () = getPuttySessionKeys () |> Array.map(fun x -> getPuttySessionValue x)
 
+    //// PuTTY Hostkey Enum ////
     let private getPuttyHostPublickeyNames () : (RegistryKey * string) [] =
-    //The intention here is to call this to get paths/names to feed to the next
-    //function, rather than that function returning a list. Prevents really
-    //stupid-looking function signatures.
-        let names = 
-            match isHighIntegrity with
-            |true -> collectHighIntegrityNames HKEY_USER "Software\\SimonTatham\\PuTTY\\SshHostKeys"
-            |false -> collectLowIntegrityNames HKEY_CURRENT_USER "Software\\SimonTatham\\PuTTY\\SshHostKeys"
+        let names = retrieveNamesByIntegrity HKEY_USER HKEY_CURRENT_USER "Software\\SimonTatham\\PuTTY\\SshHostKeys"
         names
         |> Array.map(fun tu -> 
             let key, pArray = tu
@@ -232,4 +238,5 @@
         {recentHostKeys = result}
 
 
-    let getPuttyHostPublickeyCollection () = getPuttyHostPublickeyNames () |> Array.map(fun x -> getPuttyHostPublickeyValue x)        
+    let getPuttyHostPublickeyCollection () = 
+        getPuttyHostPublickeyNames () |> Array.map getPuttyHostPublickeyValue

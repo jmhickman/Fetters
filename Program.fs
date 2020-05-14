@@ -9,7 +9,7 @@ open Fetters.Registry.Provider
 
 
 // Testing/rework harness
-printfn "===WMI QUERIES: DISK, GROUPS, OS DETAILS, USERS, MAPPED DISKS, NETWORK SHARES==="
+(*printfn "===WMI QUERIES: DISK, GROUPS, OS DETAILS, USERS, MAPPED DISKS, NETWORK SHARES==="
 printfn "=====================ANTIVIRUS, INSTALLED PATCHES==============================="
 queryWMI SDisk |> List.iter(fun x -> printfn "%A" x) // something makes win7 unhappy
 queryWMI SGroup |> List.iter(fun x -> printfn "%A" x) //compatible as-is
@@ -80,4 +80,4 @@ printfn "%A" <| enumerateUDPConnections ()
 printfn "====================LOCAL ARP TABLES====================="
 printfn "%A" <| getLocalArpTables ()
 printfn "==============USER PROCESS TOKEN PRIVILEGES=============="
-printfn "%A" <| getTokenPrivInformation ()
+printfn "%A" <| getTokenPrivInformation ()*)
