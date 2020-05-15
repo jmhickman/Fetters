@@ -23,8 +23,8 @@
   <ItemGroup>
     <Compile Include="Lists.fs" />
     <Compile Include="DomainTypes.fs" />
-    <Compile Include="dotNetFunctions.fs" />
-    <Compile Include="NI.Provider.fs" />
+    <Compile Include="DotNetFunctions.fs" />
+    <Compile Include="PInvoke.Provider.fs" />
     <Compile Include="WMI.Provider.fs" />
     <Compile Include="Registry.Provider.fs" />
     <Compile Include="Program.fs" />

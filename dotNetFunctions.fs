@@ -1,15 +1,19 @@
 ﻿module Fetters.dotNet.Common
 
     open System
+    open System.IO
+    open System.Text
+    open System.Text.RegularExpressions
     open System.Net.NetworkInformation
     open System.Security.Principal
     open Microsoft.Win32
 
     open Fetters.DomainTypes
+    open Fetters.Lists
     
-    ///////////////////
-    //Process Integrity
-    ///////////////////
+    ////////////////////////////////////
+    //Common Process Integrity Functions
+    ////////////////////////////////////
 
     let getCurrentRole 
         (role: WindowsBuiltInRole) 
@@ -24,9 +28,9 @@
     //Partial application for testing if the process is high integrity
     let isHighIntegrity = getCurrentRole WindowsBuiltInRole.Administrator
 
-    //////////
-    //Registry
-    //////////
+    ///////////////////////////
+    //Common Registry Functions
+    ///////////////////////////
     
     let getRegistryKey (hive: RegHive) (path: string) : RegistryKey option =
         //Because Windows, invalid Registry Keys return null instead of an 
@@ -154,3 +158,74 @@
         match isHighIntegrity with
         |true -> collectHighIntegrityNames hiveHigh path
         |false -> collectLowIntegrityNames hiveLow path
+
+    ///////////////////////
+    //Common File Functions
+    ///////////////////////
+
+    //// Fetters Init Code ////
+    let buildSystemDriveRoot () : string = 
+        //Instead of computing the system root over and over, build it once
+        //and be done with it.
+        sprintf "%s\\" <| Environment.GetEnvironmentVariable("SystemDrive")
+    
+    
+    let buildLocalUserFolders (sysroot: string) = //: string list =
+        //Instead of computing the list of local user directories we have
+        //access to over and over, build the list once and be done with it.
+        let userRoot = sysroot + "Users\\"
+        Directory.GetDirectories(userRoot) |> Array.except(filterUserFolders)
+
+    
+    let prependPath (path: string) (fileArray: string array) : string array =
+        fileArray |> Array.map(fun f -> path + "\\" + f)
+    
+    
+    let fileExistsInArray (file: string) (fileArray: string array) : bool =
+        fileArray |> Array.contains file
+    
+    
+    let keepFilesInArrayFromSource (fileSet: string array) (fileSource: string array) =
+        fileSet |> Array.filter(fun file -> fileExistsInArray file fileSource)
+    
+
+    let createRegex regstring : Regex =
+        new Regex(regstring)
+
+
+    let matchStringRegex (reg: Regex) matchstring = 
+        reg.Match(matchstring).Success
+
+
+    let openFileReader (path: string) : FileStream =
+        //utilize with 'use' keyword so that it closes once it leaves scope
+        File.OpenRead(path)
+
+
+    let openStreamReader (path: string) : StreamReader =
+        //utilize with 'use' keywrod so that it closes once it leaves scope
+        new StreamReader(path)
+
+
+    let yieldLineSequence (path: string) : string seq =
+        seq{use sr = openStreamReader path
+            while not sr.EndOfStream do 
+            yield sr.ReadLine()}
+
+    
+    let yieldWholeFile (path: string) : string =
+        use sr = openStreamReader path
+        sr.ReadToEnd()
+        
+
+
+    let createByteArray (bstring: string) : byte array =
+        UTF8Encoding.ASCII.GetBytes(bstring)
+
+    
+    let createb64String bArray : string =
+        Convert.ToBase64String(bArray)
+
+
+    let encodeEntireFileB64 (path: string) : string = 
+        yieldWholeFile path |> createByteArray |> createb64String

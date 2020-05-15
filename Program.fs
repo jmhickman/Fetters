@@ -1,5 +1,6 @@
 ﻿open System
 open System.Management
+open System.IO
 
 open Fetters.DomainTypes 
 open Fetters.PInvoke.Provider
@@ -26,13 +27,13 @@ printfn "%A\n" laps
 
 printfn "===================AUTOLOGON SETTINGS===================="
 let autologon = getAutoLogonSettings ()
-printfn "%A\n" autologon*)
+printfn "%A\n" autologon
 
 printfn "===================AUTORUN SETTINGS====================="
 let autorun = getAutoRunValues ()
 printfn "%A\n" autorun
 
-(*printfn "================RDP CONNECTION USERNAMES================="
+printfn "================RDP CONNECTION USERNAMES================="
 let results =  getRDPSavedConnections ()
 printfn "%A\n" results
 
@@ -85,3 +86,5 @@ printfn "====================LOCAL ARP TABLES====================="
 printfn "%A" <| getLocalArpTables ()
 printfn "==============USER PROCESS TOKEN PRIVILEGES=============="
 printfn "%A" <| getTokenPrivInformation ()*)
+
+encodeEntireFileB64 @"C:\Users\jon_h\config\tmux.conf" |> printfn "%A"

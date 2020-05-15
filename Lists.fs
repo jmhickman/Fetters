@@ -74,3 +74,11 @@
         "SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\RunService"
         "SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\RunOnceService"
         |]
+
+    let filterUserFolders = [|
+        "C:\\Users\\Default"
+        "C:\\Users\\Default User"
+        "C:\\Users\\Public"
+        "C:\\Users\\All Users"
+        |]
+

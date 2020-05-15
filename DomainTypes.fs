@@ -142,10 +142,6 @@ module Fetters.DomainTypes
         |GoogleCredential
         |NetworkCredential
 
-    type File = 
-        | Interesting_File
-        | Recent_File
-
     type VaultRecord = {
         name : string
         resource : string option
@@ -157,7 +153,7 @@ module Fetters.DomainTypes
 
     type SystemSecrets = {
         creds : Credential list
-        files : File list
+        //files : File list
         ieDump : string list
         mruCommands : string list
         rdpConnections : string list
