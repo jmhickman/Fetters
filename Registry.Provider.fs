@@ -2,7 +2,7 @@
 
     open Microsoft.Win32
     open Fetters.Lists
-    open Fetters.dotNet.Common
+    open Fetters.DotNet.Common
     open Fetters.DomainTypes
 
 

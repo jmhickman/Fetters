@@ -5,7 +5,7 @@ open System.IO
 open Fetters.DomainTypes 
 open Fetters.PInvoke.Provider
 open Fetters.WMI.Providers
-open Fetters.dotNet.Common
+open Fetters.DotNet.Common
 open Fetters.Registry.Provider
 
 
@@ -87,4 +87,3 @@ printfn "%A" <| getLocalArpTables ()
 printfn "==============USER PROCESS TOKEN PRIVILEGES=============="
 printfn "%A" <| getTokenPrivInformation ()*)
 
-encodeEntireFileB64 @"C:\Users\jon_h\config\tmux.conf" |> printfn "%A"

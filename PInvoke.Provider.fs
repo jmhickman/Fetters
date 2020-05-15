@@ -6,7 +6,7 @@
     open System.Runtime.InteropServices
     open System.Security.Principal
 
-    open Fetters.dotNet.Common
+    open Fetters.DotNet.Common
     open Fetters.DomainTypes
 
     //////////////
