@@ -1,5 +1,6 @@
 module Fetters.DomainTypes
 
+    open FSharp.Data
     open Microsoft.Win32
     open System
     open System.Net
@@ -32,6 +33,8 @@ module Fetters.DomainTypes
          name : string
          value : RegistryValueType
          }
+
+    type ChromeBookmarkJ = JsonProvider<".\SampleBookmarks">
 
     ///////////////
     // System Types
@@ -187,10 +190,41 @@ module Fetters.DomainTypes
         reportingExe : string
         }
     
+    type ChromeBookmark = {
+        name : string
+        url : string
+        }
+    
+    type ChromeHistory = {
+        path : string
+        url : string list //comes from filesystem, not registry
+        }
+
+    type ChromeInfo = {
+        bookmarks : ChromeBookmark list
+        history : ChromeHistory
+        }
+
     type EnvironmentVar = {
         environmentKey : string
         environmentVal : string 
         }
+
+    type FirefoxHistory = {
+        path : string
+        url : string list
+        }
+
+    type FirefoxInfo = {
+        history : FirefoxHistory
+        }
+    
+    type HistoryIE = {
+        path : string
+        url : RegistryResult option
+        }
+
+    
 
     type InternetSettings = {
         proxyServer : RegistryResult option

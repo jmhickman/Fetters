@@ -1,0 +1,54 @@
+{
+   "checksum": "363ec7fe6673949e935a80963665cc09",
+   "roots": {
+      "bookmark_bar": {
+         "children": [ {
+            "date_added": "13234204837296757",
+            "guid": "7ede01b1-e05a-4df1-ad03-216000873a47",
+            "id": "5",
+            "name": "Home | F# for fun and profit",
+            "type": "url",
+            "url": "https://fsharpforfunandprofit.com/"
+         }, {
+            "date_added": "13234219986384385",
+            "guid": "29470250-b721-43dd-ad1d-a4ec5f369371",
+            "id": "7",
+            "name": "Microsoft - Official Home Page",
+            "type": "url",
+            "url": "https://www.microsoft.com/en-us/"
+         }, {
+            "date_added": "13234220031605833",
+            "guid": "742b5f67-f1ad-46be-9850-3f17eeed2901",
+            "id": "8",
+            "name": "About – harmj0y",
+            "type": "url",
+            "url": "https://www.harmj0y.net/blog/about/"
+         } ],
+         "date_added": "13234204817777759",
+         "date_modified": "13234220031605833",
+         "guid": "00000000-0000-4000-a000-000000000002",
+         "id": "1",
+         "name": "Bookmarks bar",
+         "type": "folder"
+      },
+      "other": {
+         "children": [  ],
+         "date_added": "13234204817777766",
+         "date_modified": "0",
+         "guid": "00000000-0000-4000-a000-000000000003",
+         "id": "2",
+         "name": "Other bookmarks",
+         "type": "folder"
+      },
+      "synced": {
+         "children": [  ],
+         "date_added": "13234204817777767",
+         "date_modified": "0",
+         "guid": "00000000-0000-4000-a000-000000000004",
+         "id": "3",
+         "name": "Mobile bookmarks",
+         "type": "folder"
+      }
+   },
+   "version": 1
+}

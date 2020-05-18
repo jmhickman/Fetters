@@ -251,3 +251,21 @@
 
     let getPuttyHostPublickeyCollection () = 
         getPuttyHostPublickeyNames () |> Array.map getPuttyHostPublickeyValue
+
+
+    let getInternetExplorerHistoryNames() : (RegistryKey * string [])[] =
+        //I don't care about when the URL was accessed really. Skipping the
+        //Datetime computation
+        retrieveNamesByIntegrity HKEY_USER HKEY_CURRENT_USER "SOFTWARE\\Microsoft\\Internet Explorer\\TypedURLs"
+        
+
+    let getInternetExplorerHistoryValues (rKey: RegistryKey) (name: string ) : HistoryIE =
+        {path = rKey.Name; url = getRegistryValue name rKey}
+
+
+    let getInternetExplorerHistory () : HistoryIE [] = 
+        getInternetExplorerHistoryNames () 
+        |> Array.map(fun tu ->  
+            let rKey, p = tu 
+            p |> Array.map (getInternetExplorerHistoryValues rKey))
+        |> Array.concat

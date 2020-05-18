@@ -1,5 +1,6 @@
 ﻿module Fetters.Lists
 
+    open System.Security.AccessControl
     //Opinionated decision to cull UNKNOWN processes from the parent list.
     let InterestingProcesses = 
         [("mcshield.exe","McAfeeAV","AV")
@@ -82,3 +83,9 @@
         "C:\\Users\\All Users"
         |]
 
+    let fileLocationsToCheck = [|
+        ("Chrome cookies present", "AppData\\Local\\Google\\Chrome\\User Data\\Default\\Cookies")
+        ("Chrome saved credentials present", "AppData\\Local\\Google\\Chrome\\User Data\\Default\\Login Data")
+        ("Firefox saved credentials present", "AppData\\Roaming\\Mozilla\\Firefox\\Profiles\\key3.db")
+        ("Firefox saved credentials present", "AppData\\Roaming\\Mozilla\\Firefox\\Profiles\\key4.db")
+        |]

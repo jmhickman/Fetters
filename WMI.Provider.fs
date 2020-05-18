@@ -1,4 +1,4 @@
-﻿module Fetters.WMI.Providers
+﻿module Fetters.WMI.Provider
     open System
     open System.Management
     open Fetters.DomainTypes

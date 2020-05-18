@@ -1,11 +1,12 @@
 ﻿module Fetters.DotNet.Common
 
     open System
+    open System.Diagnostics.Eventing.Reader
     open System.IO
     open System.Text
     open System.Text.RegularExpressions
     open System.Net.NetworkInformation
-    open System.Security.Principal
+    open System.Security
     open Microsoft.Win32
 
     open Fetters.DomainTypes
@@ -16,17 +17,17 @@
     ////////////////////////////////////
 
     let getCurrentRole 
-        (role: WindowsBuiltInRole) 
+        (role: Principal.WindowsBuiltInRole) 
         : bool = 
     // Ask Windows about the role of the user who owns the Fetters process.
     // This is linked to the privileges on the token, not necessarily the literal groups
     // the user is in. An administrative user will still come back False if their token
     // is not elevated, so be aware of the difference.
 
-        WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(role)
+        Principal.WindowsPrincipal(Principal.WindowsIdentity.GetCurrent()).IsInRole(role)
 
     //Partial application for testing if the process is high integrity
-    let isHighIntegrity = getCurrentRole WindowsBuiltInRole.Administrator
+    let isHighIntegrity = getCurrentRole Principal.WindowsBuiltInRole.Administrator
 
     ///////////////////////////
     //Common Registry Functions
@@ -176,25 +177,25 @@
         let userRoot = sysroot + "Users\\"
         Directory.GetDirectories(userRoot) |> Array.except(filterUserFolders)
 
-    
-    let prependPath (path: string) (fileArray: string array) : string array =
-        fileArray |> Array.map(fun f -> path + "\\" + f)
-    
-    
-    let fileExistsInArray (file: string) (fileArray: string array) : bool =
-        fileArray |> Array.contains file
-    
-    
-    let keepFilesInArrayFromSource (fileSet: string array) (fileSource: string array) =
-        fileSet |> Array.filter(fun file -> fileExistsInArray file fileSource)
-    
+    let createWeekTimeWindow () : DateTime =
+        //Some functions want a time window over which they retrieve data.
+        DateTime.Now.AddDays(-7.0) //why is this forced to be a float when its an int in Seatbelt?
 
-    let createRegex regstring : Regex =
-        new Regex(regstring)
+    //// File IO helpers ////
+    let prependPath (path: string) (pathArray: string array) : string array =
+        pathArray |> Array.map(fun f -> path + "\\" + f)
+
+    
+    let listChildDirectories (path: string) : string array = 
+        Directory.GetDirectories(path)
 
 
-    let matchStringRegex (reg: Regex) matchstring = 
-        reg.Match(matchstring).Success
+    let fileExistsAtLocation (path: string) : bool =
+        File.Exists(path)
+
+    
+    let dirExistsAtLocation (path: string) : bool =
+        Directory.Exists(path)
 
 
     let openFileReader (path: string) : FileStream =
@@ -202,22 +203,57 @@
         File.OpenRead(path)
 
 
-    let openStreamReader (path: string) : StreamReader =
-        //utilize with 'use' keywrod so that it closes once it leaves scope
-        new StreamReader(path)
+    let openStreamReader (path: string) : StreamReader option =
+        //utilize with 'use' keyword so that it closes once it leaves scope
+        try 
+            let fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite) 
+            new StreamReader(fs) |> Some    
+        with _ -> None
 
+    
+    let nullStream () = 
+        //When I have to give back a StreamReader but want it to do nothing
+        let dummy = new MemoryStream(1)
+        dummy.WriteByte(9uy)
+        new StreamReader(dummy)
 
     let yieldLineSequence (path: string) : string seq =
-        seq{use sr = openStreamReader path
-            while not sr.EndOfStream do 
-            yield sr.ReadLine()}
+        seq{ use sr = 
+                match openStreamReader path with
+                |Some sr -> sr
+                |None -> nullStream ()
+        
+             while not sr.EndOfStream do 
+             yield sr.ReadLine()}
 
     
     let yieldWholeFile (path: string) : string =
-        use sr = openStreamReader path
+        use sr = 
+            match openStreamReader path with
+            |Some sr -> sr
+            |None -> nullStream ()
         sr.ReadToEnd()
-        
+    
 
+    let fileExistsInArray (fileArray: string array) (file: string) : bool =
+        fileArray |> Array.contains file
+    
+    
+    let keepFilesInArrayFromSource (fileSet: string array) (fileSource: string array) =
+        fileSet |> Array.filter (fileExistsInArray fileSource)
+    
+
+    let createMatchRegex regstring : Regex =
+        new Regex(regstring)
+
+
+    let matchStringRegex (reg: Regex) matchstring = 
+        let m = reg.Match(matchstring)
+        match m.Success with
+        |true -> m.Groups.[0].ToString().Trim()
+        |false -> ""
+        
+        
 
     let createByteArray (bstring: string) : byte array =
         UTF8Encoding.ASCII.GetBytes(bstring)
@@ -229,3 +265,15 @@
 
     let encodeEntireFileB64 (path: string) : string = 
         yieldWholeFile path |> createByteArray |> createb64String
+
+
+    (*let checkUserSIDInACL (sidList: Principal.IdentityReference list) (userSID: Principal.IdentityReference)  =
+        //Is an individual SID in the list of SIDs from the ACL on the filesystem object
+        sidList |> List.contains userSID
+
+
+    let checkUserSIDsInACL 
+        (userSIDList: Principal.IdentityReference list) 
+        (aclSIDList: Principal.IdentityReference list) =
+        //Checks each SID on the user's token to see if it exists in the ACL on the filesystem object
+        userSIDList |> List.filter (checkUserSIDInACL aclSIDList)*)

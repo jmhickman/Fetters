@@ -23,22 +23,28 @@
   <ItemGroup>
     <Compile Include="Lists.fs" />
     <Compile Include="DomainTypes.fs" />
-    <Compile Include="DotNetFunctions.fs" />
+    <Compile Include="DotNet.Common.fs" />
     <Compile Include="PInvoke.Provider.fs" />
     <Compile Include="WMI.Provider.fs" />
     <Compile Include="Registry.Provider.fs" />
+    <Compile Include="DotNet.Provider.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="FSharp.Data" Version="3.3.3" />
     <PackageReference Include="ilmerge" Version="3.0.29" />
     <PackageReference Include="Microsoft.Win32.Registry" Version="4.7.0" />
     <PackageReference Include="System.Management" Version="4.7.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="FSharp.Core" Version="4.7.1" />
+    <PackageReference Update="FSharp.Core" Version="4.7.0" />
     <PackageReference Update="System.ValueTuple" Version="4.5.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
+  
 </Project>

@@ -1,13 +1,18 @@
 ﻿open System
+open System.Security
 open System.Management
-open System.IO
+
 
 open Fetters.DomainTypes 
 open Fetters.PInvoke.Provider
-open Fetters.WMI.Providers
+open Fetters.WMI.Provider
 open Fetters.DotNet.Common
+open Fetters.DotNet.Provider
 open Fetters.Registry.Provider
 
+
+let sysroot = buildSystemDriveRoot ()
+let userfolders = buildLocalUserFolders sysroot
 
 // Testing/rework harness
 (*printfn "===WMI QUERIES: DISK, GROUPS, OS DETAILS, USERS, MAPPED DISKS, NETWORK SHARES==="
@@ -85,5 +90,12 @@ printfn "%A" <| enumerateUDPConnections ()
 printfn "====================LOCAL ARP TABLES====================="
 printfn "%A" <| getLocalArpTables ()
 printfn "==============USER PROCESS TOKEN PRIVILEGES=============="
-printfn "%A" <| getTokenPrivInformation ()*)
+printfn "%A" <| getTokenPrivInformation ()
+let ie = getInternetExplorerHistory ()
+printfn "%A" ie*)
 
+userfolders |> Array.iter (printfn "%s")
+userfolders |> Array.map triageChrome |> Array.iter (printfn "%A")
+
+let ff = userfolders |> Array.map(fun u -> getFirefoxProfiles u) |> Array.concat |> Array.map(fun u -> extractFirefoxHistory u)
+printfn "%A" ff
