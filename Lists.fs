@@ -89,3 +89,21 @@
         ("Firefox saved credentials present", "AppData\\Roaming\\Mozilla\\Firefox\\Profiles\\key3.db")
         ("Firefox saved credentials present", "AppData\\Roaming\\Mozilla\\Firefox\\Profiles\\key4.db")
         |]
+
+
+    let filteredEventAccounts = [
+        "SYSTEM"
+        "LOCAL SERVICE"
+        "NETWORK SERVICE"
+        "UMFD-0"
+        "UMFD-1"
+        "UMFD-2"
+        "UMFD-3"
+        "UMFD-4"
+        "DWM-0"
+        "DWM-1"
+        "DWM-2"
+        "DWM-3"
+        "DWM-4"
+        "ANONYMOUS LOGON"
+        ]

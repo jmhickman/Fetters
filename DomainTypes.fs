@@ -424,9 +424,34 @@ module Fetters.DomainTypes
         kerberosTGTcontents : KerberosTicket list
         }
 
-    type Event = {
-        eventId : uint32 
-        eventDesc : string 
+    type Event4624 = {
+        eventId : uint16
+        timeStamp : string
+        subjectSID : string
+        subjectUsername : string
+        subjectDomainname : string
+        subjectLogonId : string
+        targetUserSID : string
+        targetUsername : string
+        targetDomainname : string
+        logonType : string
+        workstationName : string
+        processName : string
+        ipAddress : string
+        }
+
+    type Event4648 = {
+        eventId : uint16
+        timeStamp : string
+        subjectSID : string
+        subjectUsername : string
+        subjectDomainname : string
+        subjectLogonId: string
+        targetUsername : string
+        targetDomainname : string
+        targetServername : string
+        processName : string
+        ipAddress : string
         }
 
     type InterestingProcess = {
@@ -475,7 +500,7 @@ module Fetters.DomainTypes
 
     type SystemDynamicAttributes = {
         domainSessions : DomainSession list
-        events : Event list
+        //events : Event list
         interestingProcesses : string list // filtered from Process list
         processes : Process list
         rdpSessions : RdpSession list

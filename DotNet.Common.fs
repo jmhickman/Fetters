@@ -177,6 +177,11 @@
         let userRoot = sysroot + "Users\\"
         Directory.GetDirectories(userRoot) |> Array.except(filterUserFolders)
 
+    
+    let createNowTime () : DateTime =
+        DateTime.Now
+    
+    
     let createWeekTimeWindow () : DateTime =
         //Some functions want a time window over which they retrieve data.
         DateTime.Now.AddDays(-7.0) //why is this forced to be a float when its an int in Seatbelt?
@@ -217,6 +222,7 @@
         dummy.WriteByte(9uy)
         new StreamReader(dummy)
 
+    
     let yieldLineSequence (path: string) : string seq =
         seq{ use sr = 
                 match openStreamReader path with
@@ -254,7 +260,7 @@
         |false -> ""
         
         
-
+    //// Base64 Helpers ////
     let createByteArray (bstring: string) : byte array =
         UTF8Encoding.ASCII.GetBytes(bstring)
 
@@ -267,6 +273,29 @@
         yieldWholeFile path |> createByteArray |> createb64String
 
 
+    let createEventQuery (query: string) =
+        let ev = new EventLogQuery("Security", PathType.LogName, query)
+        ev.ReverseDirection = true |> ignore
+        ev
+
+    
+    let eventFilter x =
+        filteredEventAccounts |> List.contains(x)
+
+    
+    let createEventLogReader (q: EventLogQuery) = 
+        new EventLogReader(q)
+
+
+    let extractEventLogs (e: EventLogReader) =
+        let ev _ = e.ReadEvent()
+        Seq.initInfinite ev 
+        |> Seq.takeWhile (fun r -> not(r = null)) 
+        |> Seq.filter(fun f -> not(eventFilter <| f.Properties.[5].Value.ToString()))
+        |> Seq.map(fun r -> r.TimeCreated, r.Properties)
+        
+        
+        
     (*let checkUserSIDInACL (sidList: Principal.IdentityReference list) (userSID: Principal.IdentityReference)  =
         //Is an individual SID in the list of SIDs from the ACL on the filesystem object
         sidList |> List.contains userSID

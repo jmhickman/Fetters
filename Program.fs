@@ -13,6 +13,8 @@ open Fetters.Registry.Provider
 
 let sysroot = buildSystemDriveRoot ()
 let userfolders = buildLocalUserFolders sysroot
+let nowtime = createNowTime ()
+let weekago = createWeekTimeWindow ()
 
 // Testing/rework harness
 (*printfn "===WMI QUERIES: DISK, GROUPS, OS DETAILS, USERS, MAPPED DISKS, NETWORK SHARES==="
@@ -94,8 +96,13 @@ printfn "%A" <| getTokenPrivInformation ()
 let ie = getInternetExplorerHistory ()
 printfn "%A" ie*)
 
-userfolders |> Array.iter (printfn "%s")
-userfolders |> Array.map triageChrome |> Array.iter (printfn "%A")
 
-let ff = userfolders |> Array.map(fun u -> getFirefoxProfiles u) |> Array.concat |> Array.map(fun u -> extractFirefoxHistory u)
-printfn "%A" ff
+//userfolders |> Array.iter (printfn "%s")
+//userfolders |> Array.map triageChrome |> Array.iter (printfn "%A")
+
+//let ff = userfolders |> Array.map(fun u -> getFirefoxProfiles u) |> Array.concat |> Array.map(fun u -> extractFirefoxHistory u)
+//printfn "%A" ff
+
+
+getEventLog4624 weekago nowtime |> Seq.iter (printfn "%A")
+getEventLog4648 weekago nowtime |> Seq.iter (printfn "%A")
