@@ -2,6 +2,7 @@
     open System
     open System.Management
     open Fetters.DomainTypes
+    open Fetters.DotNet.Common
 
     let localScope 
         (semaphore: WmiSemaphore) 
@@ -157,6 +158,7 @@
                     name = rawList.[0]
                     domain = rawList.[1]
                     sid = rawList.[2]
+                    groups = getCurrentUsersGroups ()
                 } 
                 user |> WmiRecord.User)
 

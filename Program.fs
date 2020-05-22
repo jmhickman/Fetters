@@ -104,5 +104,14 @@ printfn "%A" ie*)
 //printfn "%A" ff
 
 
-getEventLog4624 weekago nowtime |> Seq.iter (printfn "%A")
-getEventLog4648 weekago nowtime |> Seq.iter (printfn "%A")
+//getEventLog4624 weekago nowtime |> List.iter (printfn "%A")
+//getEventLog4648 weekago nowtime |> List.iter (printfn "%A")
+//let rfrec = createFirewallRecord false
+//printfn "%A" rfrec
+//let frec = createFirewallRecord true
+//printfn "%A" frec
+
+//getCurrentUsersGroups () |> List.iter (printfn "%A")
+
+//getDPAPIMasterKeys userfolders |> List.iter (printfn "%A")
+//getCredFiles userfolders |> List.iter (printfn "%A")

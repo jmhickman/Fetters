@@ -107,3 +107,16 @@
         "DWM-4"
         "ANONYMOUS LOGON"
         ]
+
+    let firewallPropertyNames = [
+        "Name"
+        "Description"
+        "Protocol"
+        "ApplicationName"
+        "LocalAddresses"
+        "LocalPorts"
+        "RemoteAddresses"
+        "RemotePorts"
+        "Direction"
+        "Profiles"
+        ]

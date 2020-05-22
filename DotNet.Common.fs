@@ -1,8 +1,11 @@
 ﻿module Fetters.DotNet.Common
 
     open System
+    open System.Collections
     open System.Diagnostics.Eventing.Reader
     open System.IO
+    open System.Reflection
+    open System.Runtime.InteropServices
     open System.Text
     open System.Text.RegularExpressions
     open System.Net.NetworkInformation
@@ -12,9 +15,10 @@
     open Fetters.DomainTypes
     open Fetters.Lists
     
-    ////////////////////////////////////
-    //Common Process Integrity Functions
-    ////////////////////////////////////
+    
+    /////////////////////////////////////
+    //Common Windows User/Group functions
+    /////////////////////////////////////
 
     let getCurrentRole 
         (role: Principal.WindowsBuiltInRole) 
@@ -26,8 +30,15 @@
 
         Principal.WindowsPrincipal(Principal.WindowsIdentity.GetCurrent()).IsInRole(role)
 
+
     //Partial application for testing if the process is high integrity
     let isHighIntegrity = getCurrentRole Principal.WindowsBuiltInRole.Administrator
+
+
+    let getCurrentUsersGroups () =
+        let grps = Principal.WindowsIdentity.GetCurrent().Groups
+        [for g in grps do yield g.Value, g.Translate(typeof<Principal.NTAccount>)|> string] 
+        |> List.sortBy(fun g -> (fst g).Length)
 
     ///////////////////////////
     //Common Registry Functions
@@ -186,9 +197,14 @@
         //Some functions want a time window over which they retrieve data.
         DateTime.Now.AddDays(-7.0) //why is this forced to be a float when its an int in Seatbelt?
 
+
     //// File IO helpers ////
     let prependPath (path: string) (pathArray: string array) : string array =
         pathArray |> Array.map(fun f -> path + "\\" + f)
+
+    
+    let listChildFiles (path: string) : string array =
+        Directory.GetFiles(path)
 
     
     let listChildDirectories (path: string) : string array = 
@@ -248,7 +264,16 @@
     let keepFilesInArrayFromSource (fileSet: string array) (fileSource: string array) =
         fileSet |> Array.filter (fileExistsInArray fileSource)
     
+    
+    let getByteSection startb endb path =
+        let filestream = openFileReader path
+        filestream.Seek(startb, SeekOrigin.Begin) |> ignore
+        let b = Array.zeroCreate endb
+        filestream.Read(b, 0, endb) |> ignore
+        filestream.Dispose()
+        b
 
+    //// Regex Helpers ////
     let createMatchRegex regstring : Regex =
         new Regex(regstring)
 
@@ -272,9 +297,9 @@
     let encodeEntireFileB64 (path: string) : string = 
         yieldWholeFile path |> createByteArray |> createb64String
 
-
-    let createEventQuery (query: string) =
-        let ev = new EventLogQuery("Security", PathType.LogName, query)
+    //// Event Log helpers ////
+    let createEventQuery (log: string) (query: string) =
+        let ev = new EventLogQuery(log, PathType.LogName, query)
         ev.ReverseDirection = true |> ignore
         ev
 
@@ -292,17 +317,61 @@
         Seq.initInfinite ev 
         |> Seq.takeWhile (fun r -> not(r = null)) 
         |> Seq.filter(fun f -> not(eventFilter <| f.Properties.[5].Value.ToString()))
-        |> Seq.map(fun r -> r.TimeCreated, r.Properties)
+        |> Seq.map(fun r -> 
+            r.TimeCreated.ToString(), [for p in r.Properties do yield p.Value |> string])
         
-        
-        
-    (*let checkUserSIDInACL (sidList: Principal.IdentityReference list) (userSID: Principal.IdentityReference)  =
-        //Is an individual SID in the list of SIDs from the ACL on the filesystem object
-        sidList |> List.contains userSID
+    
+    //// Firewall Enum ////
+    let createFirewallObj () =
+        let x = Type.GetTypeFromCLSID("E2B3C97F-6AE1-41AC-817A-F6F92166D7DD" |> Guid)
+        Activator.CreateInstance x
+    
+    
+    let closeCOMHandle (x: obj) =
+        Marshal.ReleaseComObject x
+
+    
+    let getFProfileProperty (fObj: obj) = 
+        fObj.GetType().InvokeMember("CurrentProfileTypes", BindingFlags.GetProperty, null, fObj, null)
 
 
-    let checkUserSIDsInACL 
-        (userSIDList: Principal.IdentityReference list) 
-        (aclSIDList: Principal.IdentityReference list) =
-        //Checks each SID on the user's token to see if it exists in the ACL on the filesystem object
-        userSIDList |> List.filter (checkUserSIDInACL aclSIDList)*)
+    let getFRuleProperty (fObj: obj) =
+        fObj.GetType().InvokeMember("Rules", BindingFlags.GetProperty, null, fObj, null)
+
+
+    let getFRuleEnumerator (fObj: obj) = 
+        fObj, (fObj.GetType().InvokeMember("GetEnumerator", BindingFlags.InvokeMethod, null, fObj, null)) :?> IEnumerator
+    
+    
+    let extractFirewallRules (fObj: obj, rEnum: IEnumerator) =
+        let readit _ = rEnum.Current
+        let rules =    
+            Seq.initInfinite readit
+            |> Seq.takeWhile (fun i -> rEnum.MoveNext())
+            |> Seq.filter (fun f -> not(f = null) && (f.GetType().InvokeMember("Enabled", BindingFlags.GetProperty, null, f, null).ToString() = "True"))
+            |> Seq.toList
+        closeCOMHandle fObj |> ignore
+        rules
+
+
+    let getRawRules () = 
+        createFirewallObj |> getFRuleProperty |> getFRuleEnumerator |> extractFirewallRules
+
+    
+    let denyOnlyFilter (l: obj list) = 
+        l |> List.filter(fun f -> (f.GetType().InvokeMember("Action", BindingFlags.GetProperty, null, f, null).ToString() = "0"))
+    
+    
+    let allowFilter (l: obj list) =
+        l |> List.filter(fun f -> (f.GetType().InvokeMember("Action", BindingFlags.GetProperty, null, f, null).ToString() = "1"))
+
+    
+    let getFirewallAttr (fObj : obj) (attrName: string) =
+        fObj.GetType().InvokeMember(attrName, BindingFlags.GetProperty, null, fObj, null) |> string
+
+    
+    
+    
+        
+
+        

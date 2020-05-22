@@ -45,9 +45,22 @@ module Fetters.DomainTypes
         mountpoint : string
         }
 
-    type Firewall = {
+    type FirewallRule = {
         name : string
-        rules : string list
+        description: string
+        protocol : string
+        applicationName: string
+        localAddresses : string
+        localPorts : string
+        remoteAddresses : string
+        remotePorts : string
+        direction : string
+        profiles : string
+        }
+    
+    type Firewall = {
+        profile : string
+        rules : FirewallRule list
         }
 
     type ArpTableByInd = {
@@ -111,9 +124,15 @@ module Fetters.DomainTypes
         password : string
         }
 
-    type DPAPIBlob = {
-        username : string 
-        password : string 
+    type DPAPIMasterKey = {
+        userSID : string 
+        encodedBlob : string 
+        }
+
+    type DPAPICredFile = {
+        path : string
+        description : string
+        encodedBlob : string
         }
 
     type GoogleCredential = {
@@ -224,8 +243,6 @@ module Fetters.DomainTypes
         url : RegistryResult option
         }
 
-    
-
     type InternetSettings = {
         proxyServer : RegistryResult option
         proxyOverride : RegistryResult option
@@ -274,6 +291,7 @@ module Fetters.DomainTypes
         description : string
         hotfixId : string
         installedOn : string}
+
     
     type PowerShellEnv = {
         poshVersion2 : RegistryResult option 
@@ -327,10 +345,12 @@ module Fetters.DomainTypes
         localAccountTokenFilterPolicy : RegistryResult option
         filterAdministratorToken : RegistryResult option
         }
+
     type User = { 
          name : string
          domain : string
          sid: string
+         groups : (string * string) list
          }
  
     type WEFSettings = {
@@ -344,7 +364,7 @@ module Fetters.DomainTypes
         localGroupsAndMembers : LocalGroup list
         lsaSettings : LSASettings
         missingCriticalPatches : string list //function output
-        patches : string list
+        patches : Patch list
         poshenv : PowerShellEnv
         services : Service list
         shares : Share list
@@ -424,6 +444,7 @@ module Fetters.DomainTypes
         kerberosTGTcontents : KerberosTicket list
         }
 
+    
     type Event4624 = {
         eventId : uint16
         timeStamp : string

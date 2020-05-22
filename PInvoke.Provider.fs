@@ -837,7 +837,7 @@
     //Useful partial for vault code
     let marshalVaultString = marshalIndirectString 16
 
-
+    
     ////////////////////////
     // Native function calls
     ////////////////////////

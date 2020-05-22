@@ -1,8 +1,10 @@
 ﻿module Fetters.DotNet.Provider
 
     open System
+    open System.Text
     open Fetters.Lists
     open Fetters.DomainTypes
+    
     open Fetters.DotNet.Common
     open Fetters.WMI.Provider
 
@@ -55,23 +57,19 @@
         |false -> {path = ""; url = []}
 
 
-    let getEventLog4624 (week: DateTime) (now: DateTime) = //: Event4624 list =
+    let getEventLog4624 (week: DateTime) (now: DateTime) : Event4624 list =
         let query = 
             sprintf "*[System/EventID=4624] and *[System[TimeCreated[@SystemTime >= '%s']]] and *[System[TimeCreated[@SystemTime <= '%s']]]" 
                 (week.ToUniversalTime().ToString("o")) 
                 (now.ToUniversalTime().ToString("o"))
-        let evl = 
-            createEventQuery query 
-            |> createEventLogReader 
-            |> extractEventLogs
-
-        evl 
+        
+        createEventQuery "Security" query 
+        |> createEventLogReader
+        |> extractEventLogs
         |> Seq.map(fun ev -> 
-            let tstamp, elist = ev
-            let e = [for e in elist do yield e.Value |> string]
-            
+            let tstamp, e = ev
             {eventId = 4624us 
-             timeStamp = tstamp.ToString()
+             timeStamp = tstamp
              subjectSID = e.[0]  
              subjectUsername = e.[1] 
              subjectDomainname = e.[2] 
@@ -84,26 +82,21 @@
              processName = e.[17]
              ipAddress = e.[18] 
              })
-            
+        |> Seq.toList
         
-    let getEventLog4648 (week: DateTime) (now: DateTime) = //: Event4648 list = 
+    let getEventLog4648 (week: DateTime) (now: DateTime) : Event4648 list = 
         let query = 
             sprintf "*[System/EventID=4648] and *[System[TimeCreated[@SystemTime >= '%s']]] and *[System[TimeCreated[@SystemTime <= '%s']]]" 
                 (week.ToUniversalTime().ToString("o")) 
                 (now.ToUniversalTime().ToString("o"))
         
-        let evl = 
-            createEventQuery query 
-            |> createEventLogReader 
-            |> extractEventLogs
-
-        evl 
+        createEventQuery "Security" query 
+        |> createEventLogReader 
+        |> extractEventLogs
         |> Seq.map(fun ev -> 
-            let tstamp, elist = ev
-            let e = [for e in elist do yield e.Value |> string]
-            
+            let tstamp, e = ev
             {eventId = 4648us 
-             timeStamp = tstamp.ToString()
+             timeStamp = tstamp
              subjectSID = e.[0]  
              subjectUsername = e.[1] 
              subjectDomainname = e.[2] 
@@ -114,3 +107,71 @@
              processName = e.[10]
              ipAddress = e.[11] 
             })
+        |> Seq.toList
+
+
+    let getFirewallRules (onlyDeny: bool) : FirewallRule list  =
+        let rawRules = getRawRules ()
+        
+        let filteredRules = 
+            match onlyDeny with
+            |true -> denyOnlyFilter rawRules
+            |false -> allowFilter rawRules
+        
+        filteredRules
+        |> List.map(fun fR -> 
+            let pList = 
+                firewallPropertyNames
+                |> List.map(fun pN -> 
+                    getFirewallAttr fR pN)
+            {name = pList.[0]
+             description = pList.[1]
+             protocol = pList.[2]
+             applicationName = pList.[3]
+             localAddresses = pList.[4]
+             localPorts = pList.[5]
+             remoteAddresses = pList.[6]
+             remotePorts = pList.[7]
+             direction = pList.[8]
+             profiles = pList.[9]
+            })
+
+
+    let createFirewallRecord denyOnly : Firewall = 
+        match denyOnly with
+        |true -> {profile = createFirewallObj() |> getFProfileProperty |> string
+                  rules = getFirewallRules true}
+        |false -> {profile = createFirewallObj() |> getFProfileProperty |> string
+                   rules = getFirewallRules false}
+
+
+    let getDPAPIMasterKeys userFolders : DPAPIMasterKey list =
+        userFolders
+        |> Array.map(fun u -> u + "\\" + "AppData\\Roaming\\Microsoft\\Protect\\")
+        |> Array.filter dirExistsAtLocation
+        |> Array.map listChildDirectories
+        |> Array.concat
+        |> Array.map listChildFiles
+        |> Array.concat
+        |> Array.filter(fun f -> 
+            let r = f.Split '\\'
+            not(r |> Array.last = "Preferred"))
+        |> Array.map(fun d ->
+            let token = d.Split('\\')
+            let sid = token.[token.Length-2]
+            {userSID = sid; encodedBlob = encodeEntireFileB64 d})
+        |> Array.toList
+
+        
+    let getCredFiles userFolders : DPAPICredFile list =
+        userFolders
+        |> Array.map(fun u -> u + "\\" + "AppData\\Local\\Microsoft\\Credentials\\")
+        |> Array.filter dirExistsAtLocation
+        |> Array.map listChildFiles
+        |> Array.concat
+        |> Array.map(fun p -> 
+            let mguid = new Guid(getByteSection 36L 16 p)
+            let strlen = BitConverter.ToInt32((getByteSection 56L 4 p), 0)
+            let credtype = Encoding.Unicode.GetString(getByteSection 60L (strlen - 6) p)
+            {path = p; description = credtype; encodedBlob = encodeEntireFileB64 p })
+        |> Array.toList
