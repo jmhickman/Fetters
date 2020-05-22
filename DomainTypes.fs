@@ -109,19 +109,20 @@ module Fetters.DomainTypes
         sessions : Session list
         winDetails : WindowsDetails
         }
+
     //////////////////////
     // System Secret Types
     //////////////////////
 
     //// Credential types ////
     type AWSCredential = {
-        username : string
-        password : string
+        path : string
+        encodedFile : string
         }
 
     type AzureCredential = {
-        username : string
-        password : string
+        path : string
+        encodedFile : string
         }
 
     type DPAPIMasterKey = {
@@ -136,13 +137,8 @@ module Fetters.DomainTypes
         }
 
     type GoogleCredential = {
-        username : string 
-        password : string 
-        }
-
-    type NetworkCredential = {
-        username : string 
-        password : string 
+        path : string 
+        encodedFile : string 
         }
 
     type PuttySSHSession = {
@@ -160,9 +156,9 @@ module Fetters.DomainTypes
     type Credential = 
         |AWSCredential
         |AzureCredential
-        |DPAPIBlob
+        |DPAPIMasterKey
+        |DPAPICredFile
         |GoogleCredential
-        |NetworkCredential
 
     type VaultRecord = {
         name : string
