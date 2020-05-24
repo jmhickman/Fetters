@@ -17,17 +17,27 @@ let nowtime = createNowTime ()
 let weekago = createWeekTimeWindow ()
 
 // Testing/rework harness
-(*printfn "===WMI QUERIES: DISK, GROUPS, OS DETAILS, USERS, MAPPED DISKS, NETWORK SHARES==="
+printfn "===WMI QUERIES: DISK, GROUPS, OS DETAILS, USERS, MAPPED DISKS, NETWORK SHARES==="
 printfn "=====================ANTIVIRUS, INSTALLED PATCHES==============================="
-queryWMI SDisk |> List.iter(fun x -> printfn "%A" x) // something makes win7 unhappy
-queryWMI SGroup |> List.iter(fun x -> printfn "%A" x) //compatible as-is
-queryWMI SOSDetails |> List.iter(fun x -> printfn "%A" x) //compatible as-is
-queryWMI SUser |> List.iter(fun x -> printfn "%A" x) // compatible as-is
-queryWMI SMappedDrive |> List.iter(fun x -> printfn "%A" x) //compatible as-is
-queryWMI SNetworkShare |> List.iter(fun x -> printfn "%A" x) //compatible as-is
-queryWMI SAV |> List.iter(fun x -> printfn "%A" x) //no result, but didn't explode either
-queryWMI SPatches |> List.iter(fun x -> printfn "%A" x) //
-
+//queryWMI SDisk |> List.iter(fun x -> printfn "%A" x) // something makes win7 unhappy
+//queryWMI SGroup |> List.iter(fun x -> printfn "%A" x) //compatible as-is
+//queryWMI SUser |> List.iter(fun x -> printfn "%A" x) // compatible as-is
+//queryWMI SMappedDrive |> List.iter(fun x -> printfn "%A" x) //compatible as-is
+//queryWMI SNetworkShare |> List.iter(fun x -> printfn "%A" x) //compatible as-is
+//queryWMI SAV |> List.iter(fun x -> printfn "%A" x) //no result, but didn't explode either
+let xx = queryWMI SService 
+        |> List.filter(fun f -> 
+        let ff =
+            match f with 
+            |WmiRecord.Service x -> x.serviceCompany
+            |_ -> ""
+        not(ff = "Microsoft Corporation"))
+        //|> List.iter (printfn "%A")
+printfn "%i" xx.Length
+let xxx = queryWMI SService
+printfn "%i" xxx.Length
+//queryWMI SPatches |> List.iter(fun x -> printfn "%A" x) //
+(*
 printfn "====================LAPS SETTINGS========================"
 let laps = getLAPSSettings ()
 printfn "%A\n" laps
@@ -116,9 +126,12 @@ printfn "%A" ie*)
 //getDPAPIMasterKeys userfolders |> List.iter (printfn "%A")
 //getCredFiles userfolders |> List.iter (printfn "%A")
 
-getGoogleCloudCreds userfolders |> ignore
-getGoogleCloudCredsL userfolders |> ignore
-getGoogleAccessTokens userfolders |> ignore
-getAzureProfile userfolders |> ignore
-getAzureTokens userfolders |> ignore
-getAWSCreds userfolders |> ignore
+//getGoogleCloudCreds userfolders |> ignore
+//getGoogleCloudCredsL userfolders |> ignore
+//getGoogleAccessTokens userfolders |> ignore
+//getAzureProfile userfolders |> ignore
+//getAzureTokens userfolders |> ignore
+//getAWSCreds userfolders |> ignore
+
+//printfn "%A" <| getBasicInfo () 
+

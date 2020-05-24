@@ -2,43 +2,49 @@
 
     open System
     open System.Collections
+    open System.Diagnostics
     open System.Diagnostics.Eventing.Reader
     open System.IO
     open System.Reflection
     open System.Runtime.InteropServices
     open System.Text
     open System.Text.RegularExpressions
-    open System.Net.NetworkInformation
-    open System.Security
+    open System.Net
+    open System.Security.Principal
     open Microsoft.Win32
 
     open Fetters.DomainTypes
     open Fetters.Lists
     
     
+    
     /////////////////////////////////////
     //Common Windows User/Group functions
     /////////////////////////////////////
 
-    let getCurrentRole 
-        (role: Principal.WindowsBuiltInRole) 
-        : bool = 
+    let getCurrentRole (role: WindowsBuiltInRole) : bool = 
     // Ask Windows about the role of the user who owns the Fetters process.
     // This is linked to the privileges on the token, not necessarily the literal groups
     // the user is in. An administrative user will still come back False if their token
     // is not elevated, so be aware of the difference.
 
-        Principal.WindowsPrincipal(Principal.WindowsIdentity.GetCurrent()).IsInRole(role)
+        WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(role)
+        
 
-
-    //Partial application for testing if the process is high integrity
-    let isHighIntegrity = getCurrentRole Principal.WindowsBuiltInRole.Administrator
+    //Convenience alias for testing if the process is high integrity
+    let isHighIntegrity () = getCurrentRole WindowsBuiltInRole.Administrator
 
 
     let getCurrentUsersGroups () =
-        let grps = Principal.WindowsIdentity.GetCurrent().Groups
-        [for g in grps do yield g.Value, g.Translate(typeof<Principal.NTAccount>)|> string] 
+        let grps = WindowsIdentity.GetCurrent().Groups
+        [for g in grps do yield g.Value, g.Translate(typeof<NTAccount>)|> string] 
         |> List.sortBy(fun g -> (fst g).Length)
+
+
+    let isLocalAdmin () = 
+        //let sid = getTokenGroupSIDs () Trying an alternative enumeration
+        let sid = [for c in WindowsPrincipal(WindowsIdentity.GetCurrent()).Claims do yield c]
+        sid |> List.map(fun s -> s.Value) |> List.contains("S-1-5-32-544")
 
     ///////////////////////////
     //Common Registry Functions
@@ -123,8 +129,9 @@
         |Some rKey -> rKey
         |None -> getThrowawayKey
  
+    
     //// Gather Sub Keys ////
-    let collectHighIntegritySubKeysHKU (path: string) =
+    let private collectHighIntegritySubKeysHKU (path: string) =
         getRegistrySubKeyNamesHKU ""
         |> Array.filter(fun x ->  x.StartsWith("S-1-5") && not (x.Contains("_Classes")))
         |> Array.map(fun sidPath -> 
@@ -135,13 +142,14 @@
             not (fs |> Array.isEmpty))
 
  
-    let collectLowIntegritySubKeys (path: string) =
+    let private collectLowIntegritySubKeys (path: string) =
         match getRegistrySubKeyNamesHKCU path with
         | xa when xa.Length > 0 -> [|(HKEY_CURRENT_USER, path, xa)|]
         | _ -> [|(HKEY_CURRENT_USER, path, [||])|]
         
-    //// Gather Key Names ////
-    let collectHighIntegrityNames (hive: RegHive) (path: string) : (RegistryKey * string [])[] =
+    
+    //// Gather Registry Names ////
+    let private collectHighIntegrityNames (hive: RegHive) (path: string) : (RegistryKey * string [])[] =
         getRegistrySubKeyNames hive ""
         |> Array.filter(fun x ->  x.StartsWith("S-1-5") && not (x.Contains("_Classes")))
         |> Array.map(fun sidPath -> 
@@ -155,9 +163,9 @@
         let rKey = getRegistryKey hive path |> extractRegistryKey
         [|rKey, rKey.GetValueNames()|]
         
-    
+        
     let retrieveSubKeysByIntegrity (path: string) : (RegHive * string * string[])[] =
-        match isHighIntegrity with
+        match isHighIntegrity () with
         |true -> collectHighIntegritySubKeysHKU path
         |false -> collectLowIntegritySubKeys path
 
@@ -167,7 +175,7 @@
         (hiveLow: RegHive)
         (path: string) 
         : (RegistryKey * string[])[] =
-        match isHighIntegrity with
+        match isHighIntegrity () with
         |true -> collectHighIntegrityNames hiveHigh path
         |false -> collectLowIntegrityNames hiveLow path
 
@@ -199,10 +207,6 @@
 
 
     //// File IO helpers ////
-    let prependPath (path: string) (pathArray: string array) : string array =
-        pathArray |> Array.map(fun f -> path + "\\" + f)
-
-    
     let listChildFiles (path: string) : string array =
         Directory.GetFiles(path)
 
@@ -218,9 +222,26 @@
     let dirExistsAtLocation (path: string) : bool =
         Directory.Exists(path)
 
+    
+    let getFileVersionInfo path : string =
+        try
+            (FileVersionInfo.GetVersionInfo path).CompanyName
+        with
+        | _ -> ""
+
+    let getDotNetAssembly path : bool =
+        try 
+            AssemblyName.GetAssemblyName path |> ignore
+            true
+        with 
+        | :? System.BadImageFormatException -> true
+        | _ -> false
+
+
+    //let isQuotedPath path : ServiceBinaryPath =
+        
 
     let openFileReader (path: string) : FileStream =
-        //utilize with 'use' keyword so that it closes once it leaves scope
         File.OpenRead(path)
 
 
@@ -257,14 +278,6 @@
         sr.ReadToEnd()
     
 
-    let fileExistsInArray (fileArray: string array) (file: string) : bool =
-        fileArray |> Array.contains file
-    
-    
-    let keepFilesInArrayFromSource (fileSet: string array) (fileSource: string array) =
-        fileSet |> Array.filter (fileExistsInArray fileSource)
-    
-    
     let getByteSection startb endb path =
         let filestream = openFileReader path
         filestream.Seek(startb, SeekOrigin.Begin) |> ignore
@@ -284,7 +297,13 @@
         |true -> m.Groups.[0].ToString().Trim()
         |false -> ""
         
-        
+    
+    let matchWMIServiceString path =
+        let m = Regex.Match(path, @"^\W*([a-z]:\\.+?(\.exe|\.dll|\.sys))\W*", RegexOptions.IgnoreCase)
+        match m.Success with
+        |true -> m.Groups.[1].ToString()
+        |false -> "false"
+
     //// Base64 Helpers ////
     let createByteArray (bstring: string) : byte array =
         UTF8Encoding.ASCII.GetBytes(bstring)
@@ -297,7 +316,10 @@
     let encodeEntireFileB64 (path: string) : string = 
         yieldWholeFile path |> createByteArray |> createb64String
 
-    //// Event Log helpers ////
+    ////////////////////////////
+    //Common Event Log Functions  
+    ////////////////////////////
+
     let createEventQuery (log: string) (query: string) =
         let ev = new EventLogQuery(log, PathType.LogName, query)
         ev.ReverseDirection = true |> ignore
@@ -320,8 +342,10 @@
         |> Seq.map(fun r -> 
             r.TimeCreated.ToString(), [for p in r.Properties do yield p.Value |> string])
         
-    
-    //// Firewall Enum ////
+    ///////////////////////////
+    //Common Firewall Functions
+    ///////////////////////////
+
     let createFirewallObj () =
         let x = Type.GetTypeFromCLSID("E2B3C97F-6AE1-41AC-817A-F6F92166D7DD" |> Guid)
         Activator.CreateInstance x

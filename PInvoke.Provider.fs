@@ -173,23 +173,23 @@
     //// Token Section ////
     [<Struct>]
     type TOKEN_INFORMATION_CLASS = 
-        |TokenUser = 1
-        |TokenGroups = 2
-        |TokenPrivileges = 3
-        |TokenOwner = 4
-        |TokenPrimaryGroup = 5
-        |TokenDefaultDacl = 6
-        |TokenSource = 7
-        |TokenType = 8
-        |TokenImpersonationLevel = 9
-        |TokenStatistics = 10
-        |TokenRestrictedSids = 11
-        |TokenSessionId = 12
-        |TokenGroupsAndPrivileges = 13
-        |TokenSessionReference = 14
-        |TokenSandBoxInert = 15
-        |TokenAuditPolicy = 16
-        |TokenOrigin = 17
+        |TokenUser = 1u
+        |TokenGroups = 2u
+        |TokenPrivileges = 3u
+        |TokenOwner = 4u
+        |TokenPrimaryGroup = 5u
+        |TokenDefaultDacl = 6u
+        |TokenSource = 7u
+        |TokenType = 8u
+        |TokenImpersonationLevel = 9u
+        |TokenStatistics = 10u
+        |TokenRestrictedSids = 11u
+        |TokenSessionId = 12u
+        |TokenGroupsAndPrivileges = 13u
+        |TokenSessionReference = 14u
+        |TokenSandBoxInert = 15u
+        |TokenAuditPolicy = 16u
+        |TokenOrigin = 17u
 
     //// UDP Section ////
 
@@ -281,6 +281,21 @@
     type LUID = 
         val mutable lower: uint32
         val mutable upper: int 
+    
+    [<Struct>]
+    [<StructLayout(LayoutKind.Sequential)>]
+    type SID_IDENTIFIER_AUTHORITY = 
+        [<MarshalAs(UnmanagedType.ByValArray, SizeConst = 6)>]
+        val mutable value: char []
+
+    [<Struct>]
+    [<StructLayout(LayoutKind.Sequential)>]
+    type SID =
+        val mutable revision : char
+        val mutable subauthcount : char
+        val mutable idauthority : SID_IDENTIFIER_AUTHORITY
+        val mutable subauthority : uint32
+
 
     [<Struct>]
     [<StructLayout(LayoutKind.Sequential)>]
@@ -474,9 +489,22 @@
     [<Struct>]
     [<StructLayout(LayoutKind.Sequential)>]
     type TOKEN_PRIVILEGES = 
-        val mutable privilegeCount : int32
+        val mutable privilegeCount : uint32
         val mutable privilegeArray : IntPtr
 
+    [<Struct>]
+    [<StructLayout(LayoutKind.Sequential)>]
+     type SID_AND_ATTRIBUTES =
+        val mutable sid : IntPtr
+        val mutable attributes : uint32
+    
+    [<Struct>]
+    [<StructLayout(LayoutKind.Sequential)>]
+    type TOKEN_GROUPS = 
+        //Groups is a SID_AND_ATTRIBUTES struct array
+        val mutable GroupCount : uint32
+        val mutable Groups : IntPtr
+    
     
     //// UDP Section ////
 
@@ -605,7 +633,10 @@
         [<Out>] int TokenInformationLength, 
         [<Out>] int32& ReturnLength
         )
-
+    
+    [<DllImport("advapi32", CharSet = CharSet.Unicode, SetLastError = true)>]
+    extern bool ConvertSidToStringSid(IntPtr pSID, [<Out>] IntPtr& ptrSid)
+    
     [<DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Ansi)>]
     extern bool LookupPrivilegeName(
         string lpSystemName, 
@@ -659,6 +690,9 @@
     
     [<DllImport("kernel32.dll")>]
     extern bool CloseHandle(IntPtr handle)
+
+    [<DllImport("kernel32.dll")>]
+    extern IntPtr LocalFree(IntPtr hMem)
 
     //// NetApi32 ////
 
@@ -1011,7 +1045,7 @@
 
     let getSystem () = 
         //Impersonate the NTAUTHORITY\SYSTEM user for the purposes of high integrity actions.
-        match isHighIntegrity with
+        match isHighIntegrity () with
         | true -> impersonateSystem ()
         | false -> sprintf "Current role cannot escalate privileges"
         
@@ -1247,7 +1281,7 @@
         //run through this function, and low priv enum can't get session info
         //So a dummy value 'Everyone' SID is placed here.
         let SID = 
-             match isHighIntegrity with
+             match isHighIntegrity () with
              |true -> SecurityIdentifier(sess.pSID)
              |false -> SecurityIdentifier("S-1-1-0")
                      
@@ -1293,7 +1327,7 @@
         
         
         let tTuple = 
-            match isHighIntegrity with
+            match isHighIntegrity () with
             |true -> printfn "%s" <| getSystem()
                      let lsaHandle = registerLsaLogonProcess ()
                      let lsaAuthPackage = lookupLsaAuthenticationPackage lsaHandle LSAStringQuery
@@ -1683,7 +1717,7 @@
         //Setup mutable throw-aways, call twice for size then retrieve, advance
         //ptr and retrieve string. Free the buffer, repeat.
         let privList = 
-            [0..(tokenPrivs.privilegeCount - 1)]
+            [0u..(tokenPrivs.privilegeCount - 1u)]
             |> List.map(fun count ->  
                 let mutable cchName = 0
                 let mutable stringPtr = IntPtr.Zero
@@ -1697,4 +1731,49 @@
         //Pack and ship
         let tokenPrivileges = {privileges = privList}
         tokenPrivileges
+    
+    
+    (*let getTokenGroupSIDs () =
+        //I deeply suspect this will not work on 32bit Windows, because the 
+        //Marshal insists on calling the SID_AND_ATTRIBUTES struct as 16bytes
+        //when it's 12 or 8. Not sure what to do about it.
+        let mutable tokenInfoLength = 0
+        let mutable tokenInfo = IntPtr.Zero
+        let mutable csid = IntPtr.Zero
+
+        GetTokenInformation(
+            WindowsIdentity.GetCurrent().Token,
+            TOKEN_INFORMATION_CLASS.TokenGroups,
+            tokenInfo,
+            tokenInfoLength,
+            &tokenInfoLength
+            ) |> ignore
+        tokenInfo <- Marshal.AllocHGlobal(tokenInfoLength)
+        GetTokenInformation(
+            WindowsIdentity.GetCurrent().Token,
+            TOKEN_INFORMATION_CLASS.TokenGroups,
+            tokenInfo,
+            tokenInfoLength,
+            &tokenInfoLength
+            ) |> ignore
         
+        let tokenGroups = Marshal.PtrToStructure<TOKEN_GROUPS>(tokenInfo)
+        let groupCount = tokenGroups.GroupCount
+        let mutable sidPtr = tokenGroups.Groups  
+        let r = 
+            [0u..(groupCount - 1u)]
+            |> List.map(fun count -> 
+                let sid =
+                    match ConvertSidToStringSid(sidPtr, &csid) with
+                    |true -> 
+                        let sid = Marshal.PtrToStringAuto(csid)
+                        sidPtr <- IntPtr.Add(sidPtr, 12)
+                        sid
+                    |false -> 
+                        sidPtr <- IntPtr.Add(sidPtr, 12)
+                        ""
+                sid )
+            |> List.filter (fun f -> not(f = ""))
+        Marshal.FreeHGlobal(tokenInfo)
+        r*)
+                

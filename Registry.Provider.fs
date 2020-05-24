@@ -136,8 +136,7 @@
                 |> Array.map(fun p -> getRegistryValue p rKey))
                 |> Array.concat
 
-        {
-         poshVersion2 = pshellver2
+        {poshVersion2 = pshellver2
          poshVersion5 = pshellver5
          poshTLog = pshellTLog
          poshMLog = pshellMLog

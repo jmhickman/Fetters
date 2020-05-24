@@ -1,4 +1,5 @@
 ﻿module Fetters.WMI.Provider
+    
     open System
     open System.Management
     open Fetters.DomainTypes
@@ -8,8 +9,8 @@
         (semaphore: WmiSemaphore) 
         : string = 
         match semaphore with
-        |SAV -> sprintf "\\\\%s\\root\\securitycenter2" <| Environment.GetEnvironmentVariable("COMPUTERNAME")
-        |_ -> sprintf "\\\\%s\\root\\cimv2" <| Environment.GetEnvironmentVariable("COMPUTERNAME")
+        |SAV -> sprintf "\\\\%s\\root\\securitycenter2" <| Environment.GetEnvironmentVariable "COMPUTERNAME"
+        |_ -> sprintf "\\\\%s\\root\\cimv2" <| Environment.GetEnvironmentVariable "COMPUTERNAME"
 
 
     let private initializeManagementScope 
@@ -33,14 +34,14 @@
         (semaphore: WmiSemaphore)
         : ObjectQuery = 
         match semaphore with
-        |SAV -> new ObjectQuery("SELECT * FROM AntiVirusProduct")
-        |SDisk -> new ObjectQuery("SELECT * FROM Win32_LogicalDisk WHERE DriveType = 3")
-        |SGroup -> new ObjectQuery("Select * from Win32_Group Where LocalAccount = True")
-        |SMappedDrive -> new ObjectQuery("SELECT * FROM Win32_NetworkConnection WHERE LocalName IS NOT NULL")
-        |SNetworkShare -> new ObjectQuery("SELECT * FROM Win32_Share WHERE NOT Name LIKE '%$'")
-        |SOSDetails -> new ObjectQuery("SELECT * FROM Win32_OperatingSystem")
-        |SPatches -> new ObjectQuery("SELECT * FROM win32_quickfixengineering")
-        |SUser -> new ObjectQuery("SELECT * FROM Win32_Account where SidType=1")
+        |SAV -> new ObjectQuery "SELECT * FROM AntiVirusProduct"
+        |SDisk -> new ObjectQuery "SELECT * FROM Win32_LogicalDisk WHERE DriveType = 3"
+        |SGroup -> new ObjectQuery "Select * from Win32_Group Where LocalAccount = True"
+        |SMappedDrive -> new ObjectQuery "SELECT * FROM Win32_NetworkConnection WHERE LocalName IS NOT NULL"
+        |SNetworkShare -> new ObjectQuery "SELECT * FROM Win32_Share WHERE NOT Name LIKE '%$'"
+        |SPatches -> new ObjectQuery "SELECT * FROM win32_quickfixengineering"
+        |SService -> new ObjectQuery "SELECT * FROM win32_service"
+        |SUser -> new ObjectQuery "SELECT * FROM Win32_Account where SidType=1"
 
 
     let private createObjectSearcher 
@@ -62,7 +63,7 @@
             |SMappedDrive -> ["ConnectionState";"LocalName";"Persistent";"RemoteName";"RemotePath";"Status";"UserName"]
             |SNetworkShare -> ["Name";"Description";"Path"]
             |SPatches -> ["Description";"HotfixId";"InstalledOn"]
-            |SOSDetails -> ["BuildNumber";"Name"]
+            |SService -> ["Name";"DisplayName";"Description";"State";"StartMode";"PathName"]
             |SUser -> ["Name";"Domain";"SID"]
         
         let wmiResults = mObjectSearcher.Get()
@@ -70,7 +71,9 @@
             rawListofList = 
                 [for result in wmiResults do
                     [for filter in filters do
-                        yield (result.[filter]).ToString()
+                        if not(result.[filter] = null) then
+                            yield (result.[filter]).ToString()
+                        else yield ""
                     ]    
                 ]
         }
@@ -131,7 +134,7 @@
                     shareDesc = rawList.[1]
                     sharePath = rawList.[2]
                     }
-                networkShare |> WmiRecord.Share)
+                networkShare |> WmiRecord.NetworkShare)
         |SPatches ->
             rawResult.rawListofList
             |> List.map(fun rawList ->
@@ -141,16 +144,20 @@
                     installedOn = rawList.[2]
                     }
                 patch |> WmiRecord.Patch)
-        |SOSDetails -> 
+        |SService -> 
             rawResult.rawListofList
             |> List.map(fun rawList ->
-                let os = {
-                    winVer = rawList.[0]
-                    build = rawList.[1]
-                    runtimeVer = ""
-                    runtimeType= ""
-                }
-                os |> WmiRecord.OS)
+                let service = {
+                    serviceName = rawList.[0]
+                    serviceDisplayname = rawList.[1]
+                    serviceCompany = getFileVersionInfo (matchWMIServiceString rawList.[5])
+                    serviceDescription = rawList.[2]
+                    serviceRunning = rawList.[3]
+                    serviceStarttype = rawList.[4]
+                    serviceIsdotnet = getDotNetAssembly (matchWMIServiceString  rawList.[5])
+                    serviceBinpath = matchWMIServiceString  rawList.[5]
+                    }
+                service |> WmiRecord.Service)
         |SUser -> 
             rawResult.rawListofList
             |> List.map(fun rawList ->

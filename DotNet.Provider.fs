@@ -1,14 +1,35 @@
 ﻿module Fetters.DotNet.Provider
 
     open System
+    open System.Net
     open System.Text
     open Fetters.Lists
     open Fetters.DomainTypes
-    
     open Fetters.DotNet.Common
-    open Fetters.WMI.Provider
+    
 
-
+    let getBasicInfo () =
+        let currentUser = 
+            {username = Environment.UserName
+             cwd = Environment.CurrentDirectory
+             isHighIntegrity = isHighIntegrity ()
+             isLocalAdmin = isLocalAdmin ()
+            }
+        
+        let rKey = getRegistryKey HKEY_LOCAL_MACHINE "Software\\Microsoft\\Windows NT\\CurrentVersion" |> Option.get
+        let windowsDetails = 
+            {productName = getRegistryValue "ProductName" rKey
+             releaseId = getRegistryValue "ReleaseId" rKey
+             currentBuild = getRegistryValue "CurrentBuild" rKey
+             arch = Environment.GetEnvironmentVariable "PROCESSOR_ARCHITECTURE"
+             buildBranch = getRegistryValue "BuildBranch" rKey
+             currentSession = currentUser
+            }
+        let pc = {hostname = (NetworkInformation.IPGlobalProperties.GetIPGlobalProperties().DomainName + "\\" + Dns.GetHostName())
+                  processorCount = Environment.ProcessorCount}
+        windowsDetails, pc
+    
+    
     let extractChromeHistory (path: string) : ChromeHistory =
         let cPath = path + "\\" + "AppData\\Local\\Google\\Chrome\\User Data\\Default\\History"
         match fileExistsAtLocation cPath with

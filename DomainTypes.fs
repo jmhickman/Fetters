@@ -87,26 +87,32 @@ module Fetters.DomainTypes
 
     type PC = {
         hostname : string
-        is_vm : bool
+        processorCount : int
         }
 
-    type Session = {
-        token : string 
-        logon_type : string
+    type CurrentSession = {
+        username : string 
+        cwd : string
+        isHighIntegrity : bool
+        isLocalAdmin : bool
         }
 
     type WindowsDetails = {
-        winVer : string 
-        runtimeVer: string 
-        runtimeType : string //function output
-        build : string}
+        productName: RegistryResult option
+        releaseId : RegistryResult option 
+        currentBuild: RegistryResult option
+        arch : string
+        buildBranch : RegistryResult option
+        currentSession : CurrentSession
+        
+        }
 
     type System = {
         disks : Disk list
         firewall : Firewall
         networks : Network list
         pc : PC
-        sessions : Session list
+        sessions : CurrentSession list
         winDetails : WindowsDetails
         }
 
@@ -317,8 +323,8 @@ module Fetters.DomainTypes
         serviceDescription : string 
         serviceRunning : string 
         serviceStarttype : string 
-        serviceIsdotnet : string 
-        serviceBinpath : ServiceBinaryPath
+        serviceIsdotnet : bool 
+        serviceBinpath : string
         }
 
     type Share = {
@@ -547,7 +553,7 @@ module Fetters.DomainTypes
         |SMappedDrive
         |SNetworkShare
         |SPatches
-        |SOSDetails
+        |SService
         |SUser
     
     type Null = Null of string
@@ -557,17 +563,12 @@ module Fetters.DomainTypes
         |Disk of Disk
         |Group of LocalGroup
         |MappedDrive of MappedDrive
-        |Share of Share
-        |OS of WindowsDetails
+        |Service of Service
+        |NetworkShare of Share
         |Patch of Patch
         |User of User
         |Null of Null
-        
 
-    (*type outputRecordType = 
-        {user: WmiRecord
-         disk: WmiRecord
-        }*)
 
     ////////////////////
     // Native Call Types
