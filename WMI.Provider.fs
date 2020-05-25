@@ -40,6 +40,7 @@
         |SMappedDrive -> new ObjectQuery "SELECT * FROM Win32_NetworkConnection WHERE LocalName IS NOT NULL"
         |SNetworkShare -> new ObjectQuery "SELECT * FROM Win32_Share WHERE NOT Name LIKE '%$'"
         |SPatches -> new ObjectQuery "SELECT * FROM win32_quickfixengineering"
+        |SProcess -> ObjectQuery "SELECT * FROM Win32_Process WHERE NOT Name LIKE '%svchost%' AND NOT Name LIKE '%conhost%'"
         |SService -> new ObjectQuery "SELECT * FROM win32_service"
         |SUser -> new ObjectQuery "SELECT * FROM Win32_Account where SidType=1"
 
@@ -63,6 +64,7 @@
             |SMappedDrive -> ["ConnectionState";"LocalName";"Persistent";"RemoteName";"RemotePath";"Status";"UserName"]
             |SNetworkShare -> ["Name";"Description";"Path"]
             |SPatches -> ["Description";"HotfixId";"InstalledOn"]
+            |SProcess -> ["Name";"ProcessId";"ExecutablePath";"CommandLine"]
             |SService -> ["Name";"DisplayName";"Description";"State";"StartMode";"PathName"]
             |SUser -> ["Name";"Domain";"SID"]
         
@@ -76,7 +78,7 @@
                         else yield ""
                     ]    
                 ]
-        }
+            }
         result
     
     
@@ -144,6 +146,17 @@
                     installedOn = rawList.[2]
                     }
                 patch |> WmiRecord.Patch)
+        |SProcess ->
+            rawResult.rawListofList
+            |> List.map(fun rawList ->
+                let processr = {
+                    processName = rawList.[0]
+                    pid = rawList.[1]
+                    processBinpath = rawList.[2]
+                    processInvocation = rawList.[3]
+                    processOwner = ""
+                    }
+                processr |> WmiRecord.Process)
         |SService -> 
             rawResult.rawListofList
             |> List.map(fun rawList ->
@@ -182,3 +195,33 @@
                 |> generateRawWMIResult semaphore 
                 |> createRecord semaphore
             |None -> []
+
+    
+    ////Owner lookup is extremely expensive. Not hooked up for now
+    let getProcessInformation () : WmiRecord list =
+        let filters = ["Name";"ProcessID";"ExecutablePath";"CommandLine"]
+        let c = initializeManagementScope (localScope SProcess)
+        let q = createObjectQuery SProcess
+        let s = createObjectSearcher c q
+        let WmiResults = s.Get()
+        [for r in WmiResults do 
+            let mo = r :?> ManagementObject
+            let objr = Array.zeroCreate 1
+            mo.InvokeMethod("GetOwner", objr) |> ignore
+            let powner = unbox<string> objr.[0]
+            let rlist = [for filter in filters do
+                         if not(r.[filter] = null) then
+                            let rl = (r.[filter]).ToString()
+                            yield  rl
+                         else yield ""
+                        ]
+            yield powner, rlist       
+        ]
+        |> List.map(fun tu ->
+            let po, rl = tu
+            {processName = rl.[0]
+             pid = rl.[1]
+             processBinpath = rl.[2]
+             processInvocation = rl.[3]
+             processOwner = po} |> WmiRecord.Process
+             )

@@ -28,8 +28,11 @@
         let pc = {hostname = (NetworkInformation.IPGlobalProperties.GetIPGlobalProperties().DomainName + "\\" + Dns.GetHostName())
                   processorCount = Environment.ProcessorCount}
         windowsDetails, pc
-    
-    
+
+    //////////////////////////
+    //Browser Data Enumeration
+    //////////////////////////
+
     let extractChromeHistory (path: string) : ChromeHistory =
         let cPath = path + "\\" + "AppData\\Local\\Google\\Chrome\\User Data\\Default\\History"
         match fileExistsAtLocation cPath with
@@ -77,6 +80,9 @@
 
         |false -> {path = ""; url = []}
 
+    ///////////////////
+    //Event Enumeration
+    ///////////////////
 
     let getEventLog4624 (week: DateTime) (now: DateTime) : Event4624 list =
         let query = 
@@ -87,6 +93,7 @@
         createEventQuery "Security" query 
         |> createEventLogReader
         |> extractEventLogs
+        |> Seq.filter(fun f -> not((snd f).[8] = "7")) // Don't really care about unlock events
         |> Seq.map(fun ev -> 
             let tstamp, e = ev
             {eventId = 4624us 
@@ -130,6 +137,9 @@
             })
         |> Seq.toList
 
+    ///////////////////////////
+    //Firewall Rule Enumeration
+    ///////////////////////////
 
     let getFirewallRules (onlyDeny: bool) : FirewallRule list  =
         let rawRules = getRawRules ()
@@ -165,6 +175,9 @@
         |false -> {profile = createFirewallObj() |> getFProfileProperty |> string
                    rules = getFirewallRules false}
 
+    /////////////////////
+    //Secrets Enumeration
+    /////////////////////
 
     let getDPAPIMasterKeys userFolders : DPAPIMasterKey list =
         userFolders

@@ -1,7 +1,5 @@
-﻿open System
-open System.Security
-open System.Management
-
+﻿
+open System
 
 open Fetters.DomainTypes 
 open Fetters.PInvoke.Provider
@@ -10,6 +8,21 @@ open Fetters.DotNet.Common
 open Fetters.DotNet.Provider
 open Fetters.Registry.Provider
 
+//// Start your engines ////
+let w = createStopWatch()
+startWatch w
+
+let printincolor (col: CColor) text = 
+    match col with
+    |Red -> 
+        Console.ForegroundColor <- ConsoleColor.Red
+        printfn "%s" text
+        Console.ResetColor()
+    |Magenta  ->
+        Console.ForegroundColor <- ConsoleColor.Magenta
+        printfn "%s" text
+        Console.ResetColor()
+
 
 let sysroot = buildSystemDriveRoot ()
 let userfolders = buildLocalUserFolders sysroot
@@ -17,94 +30,95 @@ let nowtime = createNowTime ()
 let weekago = createWeekTimeWindow ()
 
 // Testing/rework harness
-printfn "===WMI QUERIES: DISK, GROUPS, OS DETAILS, USERS, MAPPED DISKS, NETWORK SHARES==="
-printfn "=====================ANTIVIRUS, INSTALLED PATCHES==============================="
-//queryWMI SDisk |> List.iter(fun x -> printfn "%A" x) // something makes win7 unhappy
-//queryWMI SGroup |> List.iter(fun x -> printfn "%A" x) //compatible as-is
-//queryWMI SUser |> List.iter(fun x -> printfn "%A" x) // compatible as-is
-//queryWMI SMappedDrive |> List.iter(fun x -> printfn "%A" x) //compatible as-is
-//queryWMI SNetworkShare |> List.iter(fun x -> printfn "%A" x) //compatible as-is
-//queryWMI SAV |> List.iter(fun x -> printfn "%A" x) //no result, but didn't explode either
-let xx = queryWMI SService 
-        |> List.filter(fun f -> 
-        let ff =
-            match f with 
-            |WmiRecord.Service x -> x.serviceCompany
-            |_ -> ""
-        not(ff = "Microsoft Corporation"))
-        //|> List.iter (printfn "%A")
-printfn "%i" xx.Length
-let xxx = queryWMI SService
-printfn "%i" xxx.Length
+
+"================================Basic Info======================================" |> cPrinter Red
+sprintf "%A" <| getBasicInfo () |> cPrinter Green
+
+"===WMI QUERIES: DISK, GROUPS, OS DETAILS, USERS, MAPPED DISKS, NETWORK SHARES===" |> cPrinter Yellow
+"=====================ANTIVIRUS, INSTALLED PATCHES===============================" |> cPrinter Yellow
+//queryWMI SDisk |> List.iter(printfn "%A") // something makes win7 unhappy
+//queryWMI SGroup |> List.iter(printfn "%A") //compatible as-is
+//queryWMI SUser |> List.iter(printfn "%A") // compatible as-is
+//queryWMI SMappedDrive |> List.iter(printfn "%A") //compatible as-is
+//queryWMI SNetworkShare |> List.iter (printfn "%A") //compatible as-is
+//queryWMI SAV |> List.iter (printfn "%A") //no result, but didn't explode either
+//queryWMI SService |> List.iter (printfn "%A")
 //queryWMI SPatches |> List.iter(fun x -> printfn "%A" x) //
-(*
-printfn "====================LAPS SETTINGS========================"
-let laps = getLAPSSettings ()
-printfn "%A\n" laps
+//queryWMI SProcess 
+//|> List.filter(fun f -> 
+//    match f with
+//    |Process x -> not(x.processBinpath.Contains "System32" || x.processBinpath.Contains "system32" || x.processBinpath.Length = 0)
+//    |_ -> true )
+//|> List.iter (printfn "%A")
 
-printfn "===================AUTOLOGON SETTINGS===================="
-let autologon = getAutoLogonSettings ()
-printfn "%A\n" autologon
+"====================LAPS SETTINGS========================" |> cPrinter Blue
+//let laps = getLAPSSettings ()
+//printfn "%A\n" laps
 
-printfn "===================AUTORUN SETTINGS====================="
-let autorun = getAutoRunValues ()
-printfn "%A\n" autorun
+"===================AUTOLOGON SETTINGS====================" |> cPrinter Green
+//let autologon = getAutoLogonSettings ()
+//printfn "%A\n" autologon
 
-printfn "================RDP CONNECTION USERNAMES================="
-let results =  getRDPSavedConnections ()
-printfn "%A\n" results
 
-printfn "===============RECENT RUN COMMANDS (Win+R)==============="
-let recents = getRecentCommands ()
-printfn "%A\n" recents
+//printfn "===================AUTORUN SETTINGS====================="
+//let autorun = getAutoRunValues ()
+//printfn "%A\n" autorun
 
-printfn "================UAC SYSTEM CONFIGURATION================="
-let uac = getUACSystemPolicies ()
-printfn "%A\n" uac
+//printfn "================RDP CONNECTION USERNAMES================="
+//let rdpsaved =  getRDPSavedConnections ()
+//printfn "%A\n" rdpsaved
 
-printfn "=================POWERSHELL ENVIRONMENT=================="
-let psh = getPShellEnv ()
-printfn "%A\n" psh
+//printfn "===============RECENT RUN COMMANDS (Win+R)==============="
+//let recents = getRecentCommands ()
+//printfn "%A\n" recents
 
-printfn "================SYSTEM INTERNET SETTINGS================="
-let iss = getSystemInternetSettings ()
-printfn "%A\n" iss
+//printfn "================UAC SYSTEM CONFIGURATION================="
+//let uac = getUACSystemPolicies ()
+//printfn "%A\n" uac
 
-printfn "================USER INTERNET SETTINGS==================="
-let uss = getUserInternetSettings ()
-printfn "%A\n" uss
+//printfn "=================POWERSHELL ENVIRONMENT=================="
+//let psh = getPShellEnv ()
+//printfn "%A\n" psh
 
-printfn "===================LSA REGISTRY DUMP====================="
-let lsa = getLSASettings ()
-printfn "%A\n" lsa
+//printfn "================SYSTEM INTERNET SETTINGS================="
+//let iss = getSystemInternetSettings ()
+//printfn "%A\n" iss
 
-printfn "================SYSTEM AUDITING SETTINGS================="
-let audit = getAuditSettings ()
-printfn "%A\n" audit
+//printfn "================USER INTERNET SETTINGS==================="
+//let uss = getUserInternetSettings ()
+//printfn "%A\n" uss
 
-printfn "============WINDOWS EVENT FORWARDING SETTINGS============"
-let wef = getWEFSettings ()
-printfn "%A\n" wef
+//printfn "===================LSA REGISTRY DUMP====================="
+//let lsa = getLSASettings ()
+//printfn "%A\n" lsa
 
-printfn "=======PUTTY SAVED HOST KEYS AND SESSION SETTINGS========"
-printfn "%A" <| getPuttyHostPublickeyCollection ()
-printfn "%A" <| getPuttySessionCollection ()
+//printfn "================SYSTEM AUDITING SETTINGS================="
+//let audit = getAuditSettings ()
+//printfn "%A\n" audit
 
-printfn "==================NATIVE PLATFORM INVOKE================="
-printfn "============DOMAIN SESSIONS AND KERBEROS TICKETS========="
-printfn "%A" <| enumerateDomainSessions ()
-printfn "===============WINDOWS VAULT CONTENTS===================="
-printfn "%A" <| enumerateAllVaults ()
-printfn "====================TCP CONNECTIONS======================"
-printfn "%A" <| enumerateTCPConnections ()
-printfn "====================UDP CONNECTIONS======================"
-printfn "%A" <| enumerateUDPConnections ()
-printfn "====================LOCAL ARP TABLES====================="
-printfn "%A" <| getLocalArpTables ()
-printfn "==============USER PROCESS TOKEN PRIVILEGES=============="
-printfn "%A" <| getTokenPrivInformation ()
-let ie = getInternetExplorerHistory ()
-printfn "%A" ie*)
+//printfn "============WINDOWS EVENT FORWARDING SETTINGS============"
+//let wef = getWEFSettings ()
+//printfn "%A\n" wef
+
+//printfn "=======PUTTY SAVED HOST KEYS AND SESSION SETTINGS========"
+//printfn "%A" <| getPuttyHostPublickeyCollection ()
+//printfn "%A" <| getPuttySessionCollection ()
+
+//printfn "==================NATIVE PLATFORM INVOKE================="
+//printfn "============DOMAIN SESSIONS AND KERBEROS TICKETS========="
+//printfn "%A" <| enumerateDomainSessions ()
+//printfn "===============WINDOWS VAULT CONTENTS===================="
+//printfn "%A" <| enumerateAllVaults ()
+//printfn "====================TCP CONNECTIONS======================"
+//printfn "%A" <| enumerateTCPConnections ()
+//printfn "====================UDP CONNECTIONS======================"
+//printfn "%A" <| enumerateUDPConnections ()
+//printfn "====================LOCAL ARP TABLES====================="
+//printfn "%A" <| getLocalArpTables ()
+//printfn "==============USER PROCESS TOKEN PRIVILEGES=============="
+//printfn "%A" <| getTokenPrivInformation ()
+//let ie = getInternetExplorerHistory ()
+//printfn "%A" ie
 
 
 //userfolders |> Array.iter (printfn "%s")
@@ -118,7 +132,7 @@ printfn "%A" ie*)
 //getEventLog4648 weekago nowtime |> List.iter (printfn "%A")
 //let rfrec = createFirewallRecord false
 //printfn "%A" rfrec
-//let frec = createFirewallRecord true
+let frec = createFirewallRecord true
 //printfn "%A" frec
 
 //getCurrentUsersGroups () |> List.iter (printfn "%A")
@@ -126,12 +140,12 @@ printfn "%A" ie*)
 //getDPAPIMasterKeys userfolders |> List.iter (printfn "%A")
 //getCredFiles userfolders |> List.iter (printfn "%A")
 
-//getGoogleCloudCreds userfolders |> ignore
-//getGoogleCloudCredsL userfolders |> ignore
-//getGoogleAccessTokens userfolders |> ignore
-//getAzureProfile userfolders |> ignore
-//getAzureTokens userfolders |> ignore
-//getAWSCreds userfolders |> ignore
+//getGoogleCloudCreds userfolders |> List.iter (printfn "%A")
+//getGoogleCloudCredsL userfolders |> List.iter (printfn "%A")
+//getGoogleAccessTokens userfolders |> List.iter (printfn "%A")
+//getAzureProfile userfolders |> List.iter (printfn "%A")
+//getAzureTokens userfolders |> List.iter (printfn "%A")
+//getAWSCreds userfolders |> List.iter (printfn "%A")
 
-//printfn "%A" <| getBasicInfo () 
-
+stopWatch w
+sprintf "Elapsed time in ms: %i" <| getExecutiontime w |> gPrinter Asterisk |> cPrinter Green

@@ -635,7 +635,7 @@
         )
     
     [<DllImport("advapi32", CharSet = CharSet.Unicode, SetLastError = true)>]
-    extern bool ConvertSidToStringSid(IntPtr pSID, [<Out>] IntPtr& ptrSid)
+    extern bool ConvertSidToStringSid(IntPtr pSID, IntPtr& ptrSid)
     
     [<DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Ansi)>]
     extern bool LookupPrivilegeName(

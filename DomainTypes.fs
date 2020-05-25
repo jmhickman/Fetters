@@ -483,12 +483,11 @@ module Fetters.DomainTypes
 
     type Process = {
         processName : string 
-        pid : uint16 
+        pid : string
         processBinpath : string 
         processInvocation : string 
-        processIntegrity : string 
-        dotnetProcess : string
-        InterestingProcess : InterestingProcess option
+        processOwner : string
+        //InterestingProcess : InterestingProcess option
         }
 
     type RdpSession = {
@@ -553,6 +552,7 @@ module Fetters.DomainTypes
         |SMappedDrive
         |SNetworkShare
         |SPatches
+        |SProcess
         |SService
         |SUser
     
@@ -566,6 +566,7 @@ module Fetters.DomainTypes
         |Service of Service
         |NetworkShare of Share
         |Patch of Patch
+        |Process of Process
         |User of User
         |Null of Null
 
@@ -602,3 +603,17 @@ module Fetters.DomainTypes
         |HKEY_LOCAL_MACHINE
         |HKEY_CURRENT_USER
         |HKEY_USER
+
+    type CColor =
+        |Red
+        |Yellow
+        |Green
+        |Blue
+    
+    type Glyph = 
+        |Asterisk
+        |Plus
+        |Minus
+        |At
+        |Bang
+        |Octothorpe

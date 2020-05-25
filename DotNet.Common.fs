@@ -16,8 +16,47 @@
     open Fetters.DomainTypes
     open Fetters.Lists
     
+    ///////////////////////
+    //Common Misc Functions    
+    ///////////////////////
+
+    let createStopWatch () =
+        new Stopwatch()
+
+
+    let startWatch (stopwatch: Stopwatch) =
+        stopwatch.Start()
+
     
+    let stopWatch (stopwatch: Stopwatch) =
+        stopwatch.Stop()
+
+
+    let getExecutiontime (stopwatch: Stopwatch) = 
+        stopwatch.ElapsedMilliseconds
+
+
+    let gPrinter (g: Glyph) text =
+        match g with
+        |Asterisk -> "[*] " + text
+        |Plus ->  "[+] " + text
+        |Minus ->  "[-] " + text
+        |At ->  "[@] " + text
+        |Bang ->  "[!] " + text
+        |Octothorpe -> "[#] " + text
     
+    let setCColor (col:ConsoleColor) text = 
+        Console.ForegroundColor <- col
+        printfn "%s" text
+        Console.ResetColor()
+
+    let cPrinter (col: CColor) text = 
+        match col with
+        |Red -> setCColor ConsoleColor.Red text
+        |Yellow  -> setCColor ConsoleColor.Yellow text
+        |Green -> setCColor ConsoleColor.Green text
+        |Blue -> setCColor ConsoleColor.Blue text
+            
     /////////////////////////////////////
     //Common Windows User/Group functions
     /////////////////////////////////////
@@ -346,11 +385,12 @@
     //Common Firewall Functions
     ///////////////////////////
 
-    let createFirewallObj () =
+    let createFirewallObj () = //: obj =
         let x = Type.GetTypeFromCLSID("E2B3C97F-6AE1-41AC-817A-F6F92166D7DD" |> Guid)
         Activator.CreateInstance x
-    
-    
+        
+
+
     let closeCOMHandle (x: obj) =
         Marshal.ReleaseComObject x
 
@@ -379,7 +419,7 @@
 
 
     let getRawRules () = 
-        createFirewallObj |> getFRuleProperty |> getFRuleEnumerator |> extractFirewallRules
+        createFirewallObj () |> getFRuleProperty |> getFRuleEnumerator |> extractFirewallRules
 
     
     let denyOnlyFilter (l: obj list) = 
