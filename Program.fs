@@ -12,18 +12,6 @@ open Fetters.Registry.Provider
 let w = createStopWatch()
 startWatch w
 
-let printincolor (col: CColor) text = 
-    match col with
-    |Red -> 
-        Console.ForegroundColor <- ConsoleColor.Red
-        printfn "%s" text
-        Console.ResetColor()
-    |Magenta  ->
-        Console.ForegroundColor <- ConsoleColor.Magenta
-        printfn "%s" text
-        Console.ResetColor()
-
-
 let sysroot = buildSystemDriveRoot ()
 let userfolders = buildLocalUserFolders sysroot
 let nowtime = createNowTime ()
@@ -149,3 +137,6 @@ let frec = createFirewallRecord true
 
 stopWatch w
 sprintf "Elapsed time in ms: %i" <| getExecutiontime w |> gPrinter Asterisk |> cPrinter Green
+
+let nolines = yieldLineSequence "C:\\doesntexist"
+printfn "%A" nolines

@@ -295,7 +295,6 @@
     let nullStream () = 
         //When I have to give back a StreamReader but want it to do nothing
         let dummy = new MemoryStream(1)
-        dummy.WriteByte(9uy)
         new StreamReader(dummy)
 
     
