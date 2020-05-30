@@ -5,34 +5,26 @@
     open Fetters.DomainTypes
     open Fetters.DotNet.Common
 
-    let localScope 
-        (semaphore: WmiSemaphore) 
-        : string = 
+    let private localScope semaphore : string = 
         match semaphore with
         |SAV -> sprintf "\\\\%s\\root\\securitycenter2" <| Environment.GetEnvironmentVariable "COMPUTERNAME"
         |_ -> sprintf "\\\\%s\\root\\cimv2" <| Environment.GetEnvironmentVariable "COMPUTERNAME"
 
 
-    let private initializeManagementScope 
-        (path: string)
-        : ManagementScope = 
+    let private initializeManagementScope path : ManagementScope = 
         let mpath = new ManagementPath(path)
         let mScope = new ManagementScope(mpath)
         mScope
 
 
-    let private connectManagementScope 
-        (managementScope: ManagementScope) 
-        : unit option =
+    let private connectManagementScope (managementScope: ManagementScope) : unit option =
         try
             Some (managementScope.Connect())
         with
         | _ -> None
 
 
-    let private createObjectQuery
-        (semaphore: WmiSemaphore)
-        : ObjectQuery = 
+    let private createObjectQuery semaphore : ObjectQuery = 
         match semaphore with
         |SAV -> new ObjectQuery "SELECT * FROM AntiVirusProduct"
         |SDisk -> new ObjectQuery "SELECT * FROM Win32_LogicalDisk WHERE DriveType = 3"
@@ -45,17 +37,11 @@
         |SUser -> new ObjectQuery "SELECT * FROM Win32_Account where SidType=1"
 
 
-    let private createObjectSearcher 
-        (connectedScope: ManagementScope) 
-        (objectQuery: ObjectQuery)
-        : ManagementObjectSearcher = 
+    let private createObjectSearcher (connectedScope: ManagementScope) objectQuery = 
         new ManagementObjectSearcher(connectedScope, objectQuery)
         
     
-    let private generateRawWMIResult
-        (semaphore: WmiSemaphore)
-        (mObjectSearcher: ManagementObjectSearcher)
-        : WmiRawResult = 
+    let private generateRawWMIResult semaphore (mObjectSearcher: ManagementObjectSearcher) : WmiRawResult = 
         let filters = 
             match semaphore with
             |SAV -> ["DisplayName";"PathToSignedProductExe";"PathToSignedReportingExe"]
@@ -69,23 +55,18 @@
             |SUser -> ["Name";"Domain";"SID"]
         
         let wmiResults = mObjectSearcher.Get()
-        let result = {
-            rawListofList = 
-                [for result in wmiResults do
-                    [for filter in filters do
-                        if not(result.[filter] = null) then
-                            yield (result.[filter]).ToString()
-                        else yield ""
-                    ]    
-                ]
-            }
-        result
+        {rawListofList = 
+         [for result in wmiResults do
+            [for filter in filters do
+                if not(result.[filter] = null) then
+                   yield (result.[filter]).ToString()
+                else yield ""
+            ]    
+         ]}
+        
+        
     
-    
-    let private createRecord 
-        (semaphore: WmiSemaphore)
-        (rawResult: WmiRawResult)         
-        : WmiRecord list = 
+    let private createRecord semaphore rawResult : WmiRecord list = 
 
         match semaphore with
         |SAV -> 
@@ -197,7 +178,7 @@
             |None -> []
 
     
-    ////Owner lookup is extremely expensive. Not hooked up for now
+    //Owner lookup is extremely expensive. Not hooked up for now
     let getProcessInformation () : WmiRecord list =
         let filters = ["Name";"ProcessID";"ExecutablePath";"CommandLine"]
         let c = initializeManagementScope (localScope SProcess)
@@ -209,12 +190,13 @@
             let objr = Array.zeroCreate 1
             mo.InvokeMethod("GetOwner", objr) |> ignore
             let powner = unbox<string> objr.[0]
-            let rlist = [for filter in filters do
-                         if not(r.[filter] = null) then
-                            let rl = (r.[filter]).ToString()
-                            yield  rl
-                         else yield ""
-                        ]
+            let rlist = 
+                [for filter in filters do
+                 if not(r.[filter] = null) then
+                    let rl = (r.[filter]).ToString()
+                    yield  rl
+                 else yield ""
+                ]
             yield powner, rlist       
         ]
         |> List.map(fun tu ->

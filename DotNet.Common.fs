@@ -45,12 +45,14 @@
         |Bang ->  "[!] " + text
         |Octothorpe -> "[#] " + text
     
-    let setCColor (col:ConsoleColor) text = 
+    
+    let setCColor col text = 
         Console.ForegroundColor <- col
         printfn "%s" text
         Console.ResetColor()
 
-    let cPrinter (col: CColor) text = 
+    
+    let cPrinter col text = 
         match col with
         |Red -> setCColor ConsoleColor.Red text
         |Yellow  -> setCColor ConsoleColor.Yellow text
@@ -73,15 +75,19 @@
     //Convenience alias for testing if the process is high integrity
     let isHighIntegrity () = getCurrentRole WindowsBuiltInRole.Administrator
 
-
+    
     let getCurrentUsersGroups () =
+        //Retrieve group SIDs and sort them
         let grps = WindowsIdentity.GetCurrent().Groups
         [for g in grps do yield g.Value, g.Translate(typeof<NTAccount>)|> string] 
         |> List.sortBy(fun g -> (fst g).Length)
 
 
     let isLocalAdmin () = 
-        //let sid = getTokenGroupSIDs () Trying an alternative enumeration
+        //I don't trust the PInvoke version of this to work properly or give
+        //sensible output. This alternative is native .Net and in my testing
+        //did the business.
+        //let sid = getTokenGroupSIDs () 
         let sid = [for c in WindowsPrincipal(WindowsIdentity.GetCurrent()).Claims do yield c]
         sid |> List.map(fun s -> s.Value) |> List.contains("S-1-5-32-544")
 
@@ -138,7 +144,7 @@
     let getRegistrySubKeyNamesHKU = getRegistrySubKeyNames HKEY_USER
     let getRegistrySubKeyNamesHKLM = getRegistrySubKeyNames HKEY_LOCAL_MACHINE
     
-    
+    //// Get Registry values ////
     let getRegistryValue 
         (name: string) (key: RegistryKey) : RegistryResult option =
         //This doesn't take an RegistryKey option because I don't want to reach
@@ -229,7 +235,7 @@
         sprintf "%s\\" <| Environment.GetEnvironmentVariable("SystemDrive")
     
     
-    let buildLocalUserFolders (sysroot: string) = //: string list =
+    let buildLocalUserFolders (sysroot: string) : string array =
         //Instead of computing the list of local user directories we have
         //access to over and over, build the list once and be done with it.
         let userRoot = sysroot + "Users\\"
@@ -384,10 +390,9 @@
     //Common Firewall Functions
     ///////////////////////////
 
-    let createFirewallObj () = //: obj =
+    let createFirewallObj () : obj =
         let x = Type.GetTypeFromCLSID("E2B3C97F-6AE1-41AC-817A-F6F92166D7DD" |> Guid)
         Activator.CreateInstance x
-        
 
 
     let closeCOMHandle (x: obj) =

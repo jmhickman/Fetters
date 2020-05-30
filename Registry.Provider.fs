@@ -36,7 +36,7 @@
 
 
     //// AutoRun Enum ////
-    let getAutoRunValues () : AutorunSetting [] = 
+    let getAutoRunValues () : AutorunSetting list = 
         autorunLocations
         |> Array.map(fun s -> retrieveNamesByIntegrity HKEY_USER HKEY_CURRENT_USER s)
         |> Array.concat
@@ -44,6 +44,7 @@
             let rKey, pArray = tu
             pArray |> Array.map(fun p -> {location = rKey.Name; value = getRegistryValue p rKey }))
         |> Array.concat
+        |> Array.toList
  
 
     //// Sysmon Config Enum
@@ -229,7 +230,7 @@
         {hostname = results.[0]; username = results.[1]; publicKeyFile = results.[2]; portForwardings = results.[3]; connectionSharing = results.[4]}
          
     
-    let getPuttySessionCollection () = 
+    let getPuttySessions () = 
         getPuttySessionKeys () |> Array.map getPuttySessionValue
 
 
@@ -248,17 +249,17 @@
         {recentHostKeys = result}
 
 
-    let getPuttyHostPublickeyCollection () = 
+    let getPuttyHostkeys () = 
         getPuttyHostPublickeyNames () |> Array.map getPuttyHostPublickeyValue
 
 
-    let getInternetExplorerHistoryNames() : (RegistryKey * string [])[] =
+    let private getInternetExplorerHistoryNames() : (RegistryKey * string [])[] =
         //I don't care about when the URL was accessed really. Skipping the
         //Datetime computation
         retrieveNamesByIntegrity HKEY_USER HKEY_CURRENT_USER "SOFTWARE\\Microsoft\\Internet Explorer\\TypedURLs"
         
 
-    let getInternetExplorerHistoryValues (rKey: RegistryKey) (name: string ) : HistoryIE =
+    let private getInternetExplorerHistoryValues (rKey: RegistryKey) (name: string ) : HistoryIE =
         {path = rKey.Name; url = getRegistryValue name rKey}
 
 

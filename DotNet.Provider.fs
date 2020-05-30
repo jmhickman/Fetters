@@ -33,18 +33,17 @@
     //Browser Data Enumeration
     //////////////////////////
 
-    let extractChromeHistory (path: string) : ChromeHistory =
+    let private extractChromeHistory (path: string) : ChromeHistory =
         let cPath = path + "\\" + "AppData\\Local\\Google\\Chrome\\User Data\\Default\\History"
         match fileExistsAtLocation cPath with
         |true ->
             let rgx = createMatchRegex @"(http|ftp|https|file)://([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-]\s)?"
             let res = yieldLineSequence cPath  |> Seq.map (matchStringRegex rgx) |> Seq.toList |> List.filter(fun l -> not(l = ""))
             {path = path; url = res}
-
         |false -> {path = ""; url = []}
 
 
-    let extractChromeBookmarks (path: string) : ChromeBookmark list =
+    let private extractChromeBookmarks (path: string) : ChromeBookmark list =
         let cPath = path + "\\" + "AppData\\Local\\Google\\Chrome\\User Data\\Default\\Bookmarks"
         match fileExistsAtLocation cPath with
         |true -> let bookmarks = ChromeBookmarkJ.Parse(yieldWholeFile cPath)
@@ -55,12 +54,15 @@
 
 
     let triageChrome (path: string) : ChromeInfo =
+        //Fed by a collection of user paths
         let b = extractChromeBookmarks path
         let h = extractChromeHistory path
         {bookmarks = b; history = h}
         
     
-    let getFirefoxProfiles (path: string) =
+    let private getFirefoxProfiles (path: string) =
+        //Because multiple Firefox profiles could reside in one user directory,
+        //this is implemented differently than the Chrome enumeration.
         let cPath = path + "\\" + "AppData\\Roaming\\Mozilla\\Firefox\\Profiles\\"
         match dirExistsAtLocation cPath with
         |true -> let dirs = listChildDirectories cPath
@@ -70,15 +72,19 @@
         |false -> [||]
 
 
-    let extractFirefoxHistory (path: string) : FirefoxHistory =
+    let private extractFirefoxHistory (path: string) : FirefoxHistory =
         match fileExistsAtLocation path with //Leaving the check because whatever
         |true ->
-            printfn "True path"
             let rgx = createMatchRegex @"(http|ftp|https|file)://([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-]\s)?"
             let res = yieldLineSequence path  |> Seq.map (matchStringRegex rgx) |> Seq.toList |> List.filter(fun l -> not(l = ""))
             {path = path; url = res}
 
         |false -> {path = ""; url = []}
+
+    let triageFirefox path : FirefoxInfo =
+        let fpath = getFirefoxProfiles path |> Array.map extractFirefoxHistory |> Array.toList
+        
+        {history = fpath}
 
     ///////////////////
     //Event Enumeration
@@ -141,7 +147,7 @@
     //Firewall Rule Enumeration
     ///////////////////////////
 
-    let getFirewallRules (onlyDeny: bool) : FirewallRule list  =
+    let private retrieveFirewallRules (onlyDeny: bool) : FirewallRule list  =
         let rawRules = getRawRules ()
         
         let filteredRules = 
@@ -168,12 +174,12 @@
             })
 
 
-    let createFirewallRecord denyOnly : Firewall = 
+    let getFirewallRules denyOnly : Firewall = 
         match denyOnly with
         |true -> {profile = createFirewallObj() |> getFProfileProperty |> string
-                  rules = getFirewallRules true}
+                  rules = retrieveFirewallRules true}
         |false -> {profile = createFirewallObj() |> getFProfileProperty |> string
-                   rules = getFirewallRules false}
+                   rules = retrieveFirewallRules false}
 
     /////////////////////
     //Secrets Enumeration

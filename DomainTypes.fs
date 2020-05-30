@@ -1,7 +1,6 @@
 module Fetters.DomainTypes
 
     open FSharp.Data
-    open Microsoft.Win32
     open System
     open System.Net
     open System.Security
@@ -10,23 +9,14 @@ module Fetters.DomainTypes
     //Elementary types
     //////////////////
 
-    //// File Types ////
-    type InterestingFile = {
-        reason : string
-        location : string
-        }
-
-    type Recent_File = {
-        location : string
-        }
-
+    
     //// Registry Types ////
     type RegistryValueType = 
          |String of string
          |ExpandString of string
          |Binary of byte array
-         |DWord of int32
          |MultiString of string array
+         |DWord of int32
          |QWord of int64
 
      type RegistryResult = {
@@ -39,6 +29,7 @@ module Fetters.DomainTypes
     ///////////////
     // System Types
     ///////////////
+
     type Disk = {
         name : string
         size: string
@@ -104,7 +95,6 @@ module Fetters.DomainTypes
         arch : string
         buildBranch : RegistryResult option
         currentSession : CurrentSession
-        
         }
 
     type System = {
@@ -155,16 +145,16 @@ module Fetters.DomainTypes
         connectionSharing : RegistryResult option
         }
 
-    type PuttyHostPublicKeys = {
-        recentHostKeys : RegistryResult option
-        }
-
     type Credential = 
         |AWSCredential
         |AzureCredential
         |DPAPIMasterKey
         |DPAPICredFile
         |GoogleCredential
+    
+    type PuttyHostPublicKeys = {
+        recentHostKeys : RegistryResult option
+        }
 
     type VaultRecord = {
         name : string
@@ -177,11 +167,7 @@ module Fetters.DomainTypes
 
     type SystemSecrets = {
         creds : Credential list
-        //files : File list
-        ieDump : string list
-        mruCommands : string list
-        rdpConnections : string list
-        vaultSecrets : VaultRecord list
+        vaults : VaultRecord list
         }
 
     /////////////////////////////////
@@ -237,7 +223,7 @@ module Fetters.DomainTypes
         }
 
     type FirefoxInfo = {
-        history : FirefoxHistory
+        history : FirefoxHistory list
         }
     
     type HistoryIE = {
@@ -361,7 +347,7 @@ module Fetters.DomainTypes
         }
 
     type SystemStaticAttributes = {
-        //autoruns : 
+        autoruns : AutorunSetting list
         environmentVars : EnvironmentVar list
         localGroupsAndMembers : LocalGroup list
         lsaSettings : LSASettings
@@ -377,9 +363,10 @@ module Fetters.DomainTypes
         }
 
     ////////////////////////////
-    // System dynamic Attributes
+    //System dynamic Attributes
     ////////////////////////////
-
+    
+    [<Flags>]
     type KERB_TICKET_FLAGS =
         |reserved = 2147483648u
         |forwardable = 0x40000000u
@@ -446,7 +433,6 @@ module Fetters.DomainTypes
         kerberosTGTcontents : KerberosTicket list
         }
 
-    
     type Event4624 = {
         eventId : uint16
         timeStamp : string
@@ -594,10 +580,8 @@ module Fetters.DomainTypes
     type VaultHandle = VaultHandle of IntPtr
     
     ///////////////
-    // dotNet Types
+    //Program Types
     ///////////////
-
-    //These are for the dotNet.Common and Registry.Provider functions
 
     type RegHive = 
         |HKEY_LOCAL_MACHINE
@@ -617,3 +601,19 @@ module Fetters.DomainTypes
         |At
         |Bang
         |Octothorpe
+
+    type initRecord = {
+        sysRoot : string
+        luserFolders : string array
+        localAdmin : bool
+        highIntegrity : bool
+        now : DateTime
+        windowWeek : DateTime
+        }
+
+    type ProgramArguments = {
+        verbose : bool
+        terseHelp : bool
+        fullHelp : bool
+        functionGroup : string list
+        }
