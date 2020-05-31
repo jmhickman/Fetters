@@ -69,13 +69,15 @@
         {host = p; usernameHint = getRegistryValue "UsernameHint" rKey}
             
 
-    let getRDPSavedConnections () =
+    let getRDPSavedConnections () : RDPSavedConnection list =
         //Retrieves RDP connection info from the registry.
         getRDPSavedConnectionsNames ()
         |> Array.map(fun tuple ->
             let hive, path, pArray = tuple
             pArray
             |> Array.map(fun p -> getRDPSavedConnection hive path p))
+            |> Array.concat
+            |> Array.toList
 
 
     //// MRU Commands Enum ////         
@@ -169,8 +171,7 @@
         let rKey = extractRegistryKey <| getRegistryKeyHKLM "SYSTEM\\CurrentControlSet\\Control\\Lsa" 
         let lsaResults = 
             lsaNames
-            |> Array.map(fun n -> 
-                getRegistryValue n rKey)
+            |> Array.map(fun n -> getRegistryValue n rKey)
         
         {lsaPid = lsaResults.[0]
          notificationPkgs = lsaResults.[1]
@@ -222,16 +223,13 @@
 
     
     let private getPuttySessionValue (hive:RegHive, path: string, name:string ) : PuttySSHSession = 
-        let rKey = getRegistryKey hive (path + "\\" + name)
-        let key = extractRegistryKey rKey
-        let results = 
-            puttySessionNames
-            |> Array.map(fun p -> getRegistryValue p key)
+        let key = getRegistryKey hive (path + "\\" + name) |> extractRegistryKey
+        let results = puttySessionNames |> Array.map(fun p -> getRegistryValue p key)
         {hostname = results.[0]; username = results.[1]; publicKeyFile = results.[2]; portForwardings = results.[3]; connectionSharing = results.[4]}
          
     
     let getPuttySessions () = 
-        getPuttySessionKeys () |> Array.map getPuttySessionValue
+        getPuttySessionKeys () |> Array.map getPuttySessionValue |> Array.toList
 
 
     //// PuTTY Hostkey Enum ////
@@ -250,7 +248,7 @@
 
 
     let getPuttyHostkeys () = 
-        getPuttyHostPublickeyNames () |> Array.map getPuttyHostPublickeyValue
+        getPuttyHostPublickeyNames () |> Array.map getPuttyHostPublickeyValue |> Array.toList
 
 
     let private getInternetExplorerHistoryNames() : (RegistryKey * string [])[] =
@@ -263,9 +261,10 @@
         {path = rKey.Name; url = getRegistryValue name rKey}
 
 
-    let getInternetExplorerHistory () : HistoryIE [] = 
+    let getInternetExplorerHistory () : HistoryIE list = 
         getInternetExplorerHistoryNames () 
         |> Array.map(fun tu ->  
             let rKey, p = tu 
             p |> Array.map (getInternetExplorerHistoryValues rKey))
         |> Array.concat
+        |> Array.toList

@@ -83,14 +83,6 @@
         "C:\\Users\\All Users"
         |]
 
-    let fileLocationsToCheck = [|
-        ("Chrome cookies present", "AppData\\Local\\Google\\Chrome\\User Data\\Default\\Cookies")
-        ("Chrome saved credentials present", "AppData\\Local\\Google\\Chrome\\User Data\\Default\\Login Data")
-        ("Firefox saved credentials present", "AppData\\Roaming\\Mozilla\\Firefox\\Profiles\\key3.db")
-        ("Firefox saved credentials present", "AppData\\Roaming\\Mozilla\\Firefox\\Profiles\\key4.db")
-        |]
-
-
     let filteredEventAccounts = [
         "SYSTEM"
         "LOCAL SERVICE"
@@ -122,47 +114,119 @@
         ]
 
     let functionNames = [
-        "islocaladmin" 
-        "ishighintegrity"
-        "triagechrome"
-        "triagefirefox"
+        "getlocaluserfolders" //
+        "getbasicinfo" //
+        "islocaladmin" //
+        "ishighintegrity" //
+        "triagechrome" //
+        "triagefirefox" //
+        "getfirewallrules" //
+        "geteventlog4624" //
+        "geteventlog4648" //
+        "getdpapimasterkeys" //
+        "getcredfiles" //
+        "detectrdcmanfile" //
+        "getgooglecloudcreds" //
+        "getgooglecloudcredsl" //
+        "getgoogleaccesstokens" //
+        "getazuretokens" //
+        "getazureprofile" //
+        "getawscreds" //
+        "getlapssettings" //
+        "getautologonsettings" //
+        "getautorunvalues" //
+        "listsysmonconfig" //
+        "getrdpsavedconnections" //
+        "getrecentcommands" //
+        "getuacsystempolicies" //
+        "getphsellenv" //
+        "getsystemenvvariables" //
+        "getuserenvvariables" //
+        "getsysteminternetsettings" //
+        "getuserinternetsettings" //
+        "getlsasettings" //
+        "geauditsettings" //
+        "getwefsettings" //
+        "getputtysessions" //
+        "getputtyhostkeys" //
+        "getinternetexplorerhistory" //
+        "querywmi-av" //
+        "querywmi-service" //
+        "querywmi-mappeddrive" //
+        "querywmi-networkshare" //
+        "querywmi-process" //
+        "querywmi-disk" //
+        "querywmi-group" //
+        "querywmi-patches" //
+        "querywmi-user" //
+        "getprocessinformation"
+        "gettokengroupsids" //
+        "gettokenprivinformation" //
+        "getlocalarptables" //
+        "enumerateudpconnections" //
+        "enumeratetcpconnections" //
+        "enumerateuservaults" //
+        "enumeratedomainsessions" //
+        "getlocalgroupmembership" //
+        "enumeraterdpsessions" //
+        ]
+
+    let systemGroup = [
+        "getbasicinfo"
+        "gettokenprivinformation"
+        "getuacsystempolicies"
+        "getpshellenv"
+        "getauditsettings"
+        "getwefsettings"
+        "getlsasettings"
+        "getsystemenvvariables"
+        "getuserenvvariables"
+        "querywmi-service"
+        "getsysteminternetsettings"
+        "getuserinternetsettings"
+        "getlapssettings"
+        "getlocalgroupmembership"
+        "querywmi-mappeddrive"
+        "enumeraterdpsessions"
+        "querywmi-networkshare"
         "getfirewallrules"
-        "geteventlog4624"
-        "geteventlog4648"
+        "querywmi-av"
+        "querywmi-process"
+        "getautologonsettings"
+        "getautorunvalues"
+        "getlocalarptables"
+        "enumeratetcpconnections"
+        "enumerateudpconnections"
+        "listsysmonconfig"
+        "querywmi-disk"
+        "querywmi-group"
+        "querywmi-user"
+        ]
+
+    let userGroup = [
+        "triagefirefox"
+        "triagechrome"
         "getdpapimasterkeys"
         "getcredfiles"
         "detectrdcmanfile"
-        "getgooglecloudcreds"
+        "getgooglecloudcreds" 
         "getgooglecloudcredsl"
         "getgoogleaccesstokens"
         "getazuretokens"
         "getazureprofile"
         "getawscreds"
-        "getlapssettings"
-        "getautologonsettings"
-        "getautorunvalues"
-        "listsysmonconfig"
         "getrdpsavedconnections"
         "getrecentcommands"
-        "getuacsystempolicies"
-        "getphsellenv"
-        "getsysteminternetsettings"
-        "getuserinternetsettings"
-        "getlsasettings"
-        "geauditsettings"
-        "getwefsettings"
         "getputtysessions"
         "getputtyhostkeys"
         "getinternetexplorerhistory"
-        "querywmi"
-        "getprocessinformation"
-        "gettokengroupsids"
-        "gettokenprivinformation"
-        "getlocalarptables"
-        "enumerateudpconnections"
-        "enumeratetcpconnections"
         "enumerateuservaults"
         "enumeratedomainsessions"
-        "getlocalgroupmembership"
-        "enumeraterdpsessions"
         ]
+
+    let extraGroup = [
+        "geteventlog4624"
+        "geteventlog4648"
+        "querywmi-patches"
+        ]
+

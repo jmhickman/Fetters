@@ -33,7 +33,7 @@ module Fetters.DomainTypes
     type Disk = {
         name : string
         size: string
-        mountpoint : string
+        filesystem : string
         }
 
     type FirewallRule = {
@@ -97,14 +97,6 @@ module Fetters.DomainTypes
         currentSession : CurrentSession
         }
 
-    type System = {
-        disks : Disk list
-        firewall : Firewall
-        networks : Network list
-        pc : PC
-        sessions : CurrentSession list
-        winDetails : WindowsDetails
-        }
 
     //////////////////////
     // System Secret Types
@@ -165,11 +157,7 @@ module Fetters.DomainTypes
         lastModified : DateTime
         }
 
-    type SystemSecrets = {
-        creds : Credential list
-        vaults : VaultRecord list
-        }
-
+ 
     /////////////////////////////////
     // System Static Attributes Types
     /////////////////////////////////
@@ -214,7 +202,7 @@ module Fetters.DomainTypes
 
     type EnvironmentVar = {
         environmentKey : string
-        environmentVal : string 
+        environmentVal : string
         }
 
     type FirefoxHistory = {
@@ -346,21 +334,6 @@ module Fetters.DomainTypes
         policies : RegistryResult option []
         }
 
-    type SystemStaticAttributes = {
-        autoruns : AutorunSetting list
-        environmentVars : EnvironmentVar list
-        localGroupsAndMembers : LocalGroup list
-        lsaSettings : LSASettings
-        missingCriticalPatches : string list //function output
-        patches : Patch list
-        poshenv : PowerShellEnv
-        services : Service list
-        shares : Share list
-        uaclevel : string
-        users : User list
-        userFolders : string list
-        wefEn : bool 
-        }
 
     ////////////////////////////
     //System dynamic Attributes
@@ -506,18 +479,7 @@ module Fetters.DomainTypes
         service : string option
         }
 
-    type SystemDynamicAttributes = {
-        domainSessions : DomainSession list
-        //events : Event list
-        interestingProcesses : string list // filtered from Process list
-        processes : Process list
-        rdpSessions : RdpSession list
-        tcpConnections : TCPConnection list
-        udpTraffic : UDPListener list
-        userTokenPrivileges : TokenPrivileges
-        }
 
-    
     /////////////////////////
     // WMI Query Module Types
     /////////////////////////
@@ -612,7 +574,6 @@ module Fetters.DomainTypes
         }
 
     type ProgramArguments = {
-        verbose : bool
         terseHelp : bool
         fullHelp : bool
         functionGroup : string list

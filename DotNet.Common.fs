@@ -9,7 +9,6 @@
     open System.Runtime.InteropServices
     open System.Text
     open System.Text.RegularExpressions
-    open System.Net
     open System.Security.Principal
     open Microsoft.Win32
 
@@ -58,7 +57,39 @@
         |Yellow  -> setCColor ConsoleColor.Yellow text
         |Green -> setCColor ConsoleColor.Green text
         |Blue -> setCColor ConsoleColor.Blue text
-            
+
+
+    let centerPrint (text:string) =
+        let halfpad = (Console.WindowWidth - text.Length ) / 2
+        sprintf "%*s%s%-*s" halfpad "" text halfpad ""
+
+
+    let leftQuarPrint text = 
+        let quarW = Console.WindowWidth / 4
+        sprintf "%*s" quarW text
+
+
+    let rightQuarPrint text = 
+        let quarW = Console.WindowWidth / 4
+        sprintf "%-*s" quarW text
+
+
+    let leftTenthPrint text = 
+        let tenW = Console.WindowWidth / 10
+        sprintf "%*s" tenW text
+
+
+    let rightTenthPrint text = 
+        let tenW = Console.WindowWidth / 10
+        sprintf "%-*s" tenW text
+
+
+    let splitPrint (text1:string, text2:string) = 
+        let spacer = Console.WindowWidth - (text1.Length + text2.Length)
+        printfn "%s%*s%s" text1 spacer "" text2
+
+
+
     /////////////////////////////////////
     //Common Windows User/Group functions
     /////////////////////////////////////
@@ -235,7 +266,7 @@
         sprintf "%s\\" <| Environment.GetEnvironmentVariable("SystemDrive")
     
     
-    let buildLocalUserFolders (sysroot: string) : string array =
+    let getLocalUserFolders (sysroot: string) : string array =
         //Instead of computing the list of local user directories we have
         //access to over and over, build the list once and be done with it.
         let userRoot = sysroot + "Users\\"

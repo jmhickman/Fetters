@@ -637,7 +637,7 @@
     [<DllImport("advapi32", CharSet = CharSet.Unicode, SetLastError = true)>]
     extern bool ConvertSidToStringSid(IntPtr pSID, IntPtr& ptrSid)
     
-    [<DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)>]
+    [<DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Ansi)>]
     extern bool LookupPrivilegeName(
         string lpSystemName, 
         IntPtr lpLuid, 
@@ -1668,11 +1668,13 @@
                 LookupPrivilegeName("", privPtr, stringPtr, &cchName) |> ignore
                 stringPtr <- Marshal.AllocHGlobal(cchName)
                 LookupPrivilegeName("", privPtr, stringPtr, &cchName) |> ignore
-                let privString =  Marshal.PtrToStringUni(stringPtr)
+                let privString =  Marshal.PtrToStringAnsi(stringPtr)
                 privPtr <- IntPtr.Add(privPtr, 12)
                 Marshal.FreeHGlobal(stringPtr)
                 privString)
         //Pack and ship
+        CloseHandle privPtr |> ignore
+        CloseHandle tokenInfo |> ignore
         {privileges = privList}
         
     
