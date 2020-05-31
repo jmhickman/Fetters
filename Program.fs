@@ -40,11 +40,14 @@ let rec createArgumentRecord args (initArgs:ProgramArguments ) : ProgramArgument
     |FunctionName x::tail -> 
         let uArgs = {initArgs with functionGroup = x::initArgs.functionGroup; terseHelp = false}
         createArgumentRecord tail uArgs
-    |"system"::tail ->
-        let uArgs = {initArgs with functionGroup = systemGroup; terseHelp = false}
-        uArgs
     |"all"::tail ->
         let uArgs = {initArgs with functionGroup = systemGroup @ userGroup @ extraGroup; terseHelp = false}
+        uArgs
+    |"extra"::tail ->
+        let uArgs = {initArgs with functionGroup = extraGroup; terseHelp = false}
+        uArgs
+    |"system"::tail ->
+        let uArgs = {initArgs with functionGroup = systemGroup; terseHelp = false}
         uArgs
     |"user"::tail ->
         let uArgs = {initArgs with functionGroup = userGroup ; terseHelp = false}
@@ -57,10 +60,14 @@ let printTerseHelp () =
     "FETTERS" |> centerPrint |> cPrinter Yellow
     "release: beta" |> centerPrint |> cPrinter Yellow
     printfn "\n\n"
+    "fetters [group]" |> leftTenthPrint |> cPrinter Yellow
+    "fetters [functionname..]" |> leftTenthPrint |> cPrinter Yellow
+    printfn "\n"
     "Options:" |> leftTenthPrint |> cPrinter Green
     "-hh              Shows verbose help for each enumeration function" |> cPrinter Blue
     "system           Runs enumerations targeting the system" |> cPrinter Blue
     "user             Runs enumerations targeting individual users" |> cPrinter Blue
+    "extra            Checks that are long running, require elevation or unreliable" |> cPrinter Blue
     "all              Runs system and user checks together" |> cPrinter Blue
     "<functionname>   List of individual checks, not case sensitive" |> cPrinter Blue
     printfn ""
@@ -72,12 +79,26 @@ let printFullHelp () =
     "release: beta" |> centerPrint |> cPrinter Yellow
     printfn "\n\n"
     "Full help" |> leftTenthPrint |> cPrinter Green
-    "Function names are not case-sensitive" |> gPrinter Bang |> cPrinter Red        //
+    "Function names are not case-sensitive" |> gPrinter Bang |> cPrinter Red
+    "Checks that benefit from high integrity processes automatically do so." |> gPrinter Bang |> cPrinter Red
+    printfn "\n"
+    "'system' checks:" |> gPrinter Asterisk |> cPrinter Green
     ("getbasicinfo", "Lists Windows information, plus process integrity info") |> splitPrint
-    ("islocaladmin", "Is the current user in the administrators' group") |> splitPrint
-    ("ishighintegrity", "Is the current process using an administrative token") |> splitPrint
-    ("gettokengroupsids", "Lists SIDs the current process claims. (Unreliable)") |> splitPrint
+    ("querywmi-mappeddrive", "Lists drives that are mapped to remote shares") |> splitPrint
+    ("querywmi-networkshare", "Lists items shared to the local network on the host") |> splitPrint
+    ("querywmi-av", "Lists Antivirus products registered to Windows") |> splitPrint
+    ("querywmi-process", "Lists all processes on the system.") |> splitPrint // tighten up wording
+    ("querywmi-service", "Lists Windows services aside from svchost/conhost processes") |> splitPrint
+    ("querywmi-disk", "Lists local disk information") |> splitPrint
+    ("querywmi-group", "Lists all local groups on the system") |> splitPrint
+    ("querywmi-user", "Lists all local user accounts and group memberships") |> splitPrint
     ("gettokenprivinformation", "Lists the system privileges claimed by current process") |> splitPrint
+    ("getlocalgroupmembership", "Lists supplied group members; Default 'Administrators'") |> splitPrint
+    ("getlocalarptables", "Lists local ARP entries that are *dynamic*") |> splitPrint
+    ("enumeratetcpconnections", "Lists all TCP connections") |> splitPrint
+    ("enumerateudpconnections", "Lists UDP listening processes") |> splitPrint
+    ("getfirewallrules-deny", "Lists firewall DENY rules") |> splitPrint
+    ("getfirewallrules-allow", "Lists firewall ALLOW rules") |> splitPrint
     ("getuacsystempolicies", "Displays system UAC behavior and configuration") |> splitPrint
     ("getpshellenv", "Lists the current PowerShell environment and logging settings") |> splitPrint
     ("getauditsettings", "Lists the current system auditing settings (Registry)") |> splitPrint
@@ -88,16 +109,12 @@ let printFullHelp () =
     ("getsysteminternetsettings", "Lists system-wide proxy settings") |> splitPrint
     ("getuserinternetsettings", "Lists current user's proxy settings") |> splitPrint
     ("getlapssettings", "Lists the LAPS configuration if present") |> splitPrint
-    ("getlocalgroupmembership", "Lists supplied group members; Default 'Administrators'") |> splitPrint
     ("enumeraterdpsessions", "Lists any active inbound RDP sessions") |> splitPrint
-    ("getfirewallrules-deny", "Lists firewall DENY rules") |> splitPrint
-    ("getfirewallrules-allow", "Lists firewall ALLOW rules") |> splitPrint
     ("getautologonsettings", "Lists Windows automatic logons, if present") |> splitPrint
     ("getautorunvalues", "Lists autorun registry values") |> splitPrint
-    ("getlocalarptables", "Lists local ARP entries that are *dynamic*") |> splitPrint
-    ("enumeratetcpconnections", "Lists all TCP connections") |> splitPrint
-    ("enumerateudpconnections", "Lists UDP listening processes") |> splitPrint
     ("listsysmonconfig", "Queries Sysmon regkeys if present and elevated") |> splitPrint
+    printfn ""
+    "'user checks:" |> gPrinter Asterisk |> cPrinter Green
     ("triagefirefox", "Dumps Firefox history information") |> splitPrint
     ("triagechrome", "Dumps Chrome history and bookmarks") |> splitPrint
     ("getdpapimasterkeys", "Dumps all accessible DPAPI blobs in base64 form") |> splitPrint
@@ -116,18 +133,13 @@ let printFullHelp () =
     ("getinternetexplorerhistory", "Lists IE history items") |> splitPrint
     ("enumerateuservaults", "Dumps all accessible Windows Vault contents") |> splitPrint
     ("enumeratedomainsessions", "Dumps Session and Kerberos TGT/Cached ticket data") |> splitPrint
+    printfn ""
+    "'extra' checks" |> gPrinter Asterisk |> cPrinter Green 
     ("geteventlog4624", "ELEVATED Only 7 day Event 4624 information from Security Log") |> splitPrint
     ("geteventlog4624", "ELEVATED Only 7 day Event 4648 information from Security Log") |> splitPrint
-    ("querywmi-disk", "Lists local disk information") |> splitPrint
-    ("querywmi-groups", "Lists all local groups on the system") |> splitPrint
-    ("querywmi-service", "Lists Windows services aside from svchost/conhost processes") |> splitPrint
-    ("querywmi-mappeddrive", "Lists drives that are mapped to remote shares") |> splitPrint
-    ("querywmi-networkshare", "Lists items shared to the local network on the host") |> splitPrint
-    ("querywmi-av", "Lists Antivirus products registered to Windows") |> splitPrint
-    ("querywmi-process", "Lists all processes on the system.") |> splitPrint // tighten up wording
-    ("querywmi-user", "Lists all local user accounts and group memberships") |> splitPrint
+    ("gettokengroupsids", "Lists SIDs the current process claims. (Unreliable)") |> splitPrint
+    ("getprocessinformation", "Lists processes and their owners. Very Slow") |> splitPrint
     ("querywmi-patches", "Lists all installed Windows patches") |> splitPrint
-
 
 let matchFunctionAndRun (uFolders: string array) highBool now week (func: string)  =
     match func with
@@ -182,8 +194,8 @@ let matchFunctionAndRun (uFolders: string array) highBool now week (func: string
     |"getinternetexplorerhistory" -> getInternetExplorerHistory () |> printfn "%A"
     |"enumerateuservaults" -> enumerateUserVaults () |> printfn "%A"
     |"enumeratedomainsessions" -> enumerateDomainSessions () |> printfn "%A"
-    |"geteventlog4624" -> if highBool then getEventLog4624 week now |> printfn "%A" else ()
-    |"geteventlog4648" -> if highBool then getEventLog4648 week now |> printfn "%A" else ()
+    |"geteventlog4624" -> if highBool then getEventLog4624 week now |> printfn "%A" else printfn "Lack privs to open Security log"
+    |"geteventlog4648" -> if highBool then getEventLog4648 week now |> printfn "%A" else printfn "Lack privs to open Security log"
     |"querywmi-patches" -> queryWMI SPatches |> printfn "%A"
     |_ -> printf ""
 
