@@ -6,11 +6,9 @@ module Fetters.DomainTypes
     open System.Security
 
     //////////////////
-    //Elementary types
+    //Elementary Types
     //////////////////
 
-    
-    //// Registry Types ////
     type RegistryValueType = 
          |String of string
          |ExpandString of string
@@ -27,318 +25,31 @@ module Fetters.DomainTypes
     type ChromeBookmarkJ = JsonProvider<".\SampleBookmarks">
 
     ///////////////
-    // System Types
+    //PInvoke Types
     ///////////////
-
-    type Disk = {
-        name : string
-        size: string
-        filesystem : string
-        }
-
-    type FirewallRule = {
-        name : string
-        description: string
-        protocol : string
-        applicationName: string
-        localAddresses : string
-        localPorts : string
-        remoteAddresses : string
-        remotePorts : string
-        direction : string
-        profiles : string
-        }
     
-    type Firewall = {
-        profile : string
-        rules : FirewallRule list
-        }
-
+    type LsaProcessHandle = LsaProcessHandle of IntPtr
+    
+    type LsaAuthPackage = LsaAuthPackage of int
+    
+    type LUIDPtr = LUIDPtr of IntPtr
+    
+    type VaultGuid = VaultGuid of IntPtr
+    
+    type VaultPtr = VaultPtr of IntPtr
+    
+    type VaultItemPtr = VaultItemPtr of IntPtr
+    
+    type VaultHandle = VaultHandle of IntPtr
+    
     type ArpTableByInd = {
-        indexaddresses : (int32 * (IPAddress * string))
-        }
+           indexaddresses : (int32 * (IPAddress * string))
+           }
 
     type ArpTable = {
         addresses : (IPAddress * string) list
         }
 
-    type Interface = {
-        adapterIndex : uint16
-        adapterAddr : IPAddress
-        adapterMAC : string
-        gatewayAddr : IPAddress
-        dnsServers : IPAddress list
-        dhcpServers : IPAddress list
-        arpTable : ArpTable
-        }
-
-    type Network = {
-        interfaces : Interface list
-        }
-
-    type PC = {
-        hostname : string
-        processorCount : int
-        }
-
-    type CurrentSession = {
-        username : string 
-        cwd : string
-        isHighIntegrity : bool
-        isLocalAdmin : bool
-        }
-
-    type WindowsDetails = {
-        productName: RegistryResult option
-        releaseId : RegistryResult option 
-        currentBuild: RegistryResult option
-        arch : string
-        buildBranch : RegistryResult option
-        currentSession : CurrentSession
-        }
-
-
-    //////////////////////
-    // System Secret Types
-    //////////////////////
-
-    //// Credential types ////
-    type AWSCredential = {
-        path : string
-        encodedFile : string
-        }
-
-    type AzureCredential = {
-        path : string
-        encodedFile : string
-        }
-
-    type DPAPIMasterKey = {
-        userSID : string 
-        encodedBlob : string 
-        }
-
-    type DPAPICredFile = {
-        path : string
-        description : string
-        encodedBlob : string
-        }
-
-    type GoogleCredential = {
-        path : string 
-        encodedFile : string 
-        }
-
-    type PuttySSHSession = {
-        hostname : RegistryResult option
-        username : RegistryResult option
-        publicKeyFile : RegistryResult option
-        portForwardings : RegistryResult option
-        connectionSharing : RegistryResult option
-        }
-
-    type Credential = 
-        |AWSCredential
-        |AzureCredential
-        |DPAPIMasterKey
-        |DPAPICredFile
-        |GoogleCredential
-    
-    type PuttyHostPublicKeys = {
-        recentHostKeys : RegistryResult option
-        }
-
-    type VaultRecord = {
-        name : string
-        resource : string option
-        identity : string option
-        packageSid : string option
-        credential : string option
-        lastModified : DateTime
-        }
-
- 
-    /////////////////////////////////
-    // System Static Attributes Types
-    /////////////////////////////////
-
-    type AuditSettings = {
-        processauditing : RegistryResult option}
-
-    type AutoLogonSettings = {
-        defaultDomainName : RegistryResult option
-        defaultUserName : RegistryResult option
-        defaultPassword : RegistryResult option
-        altDefaultDomainName : RegistryResult option
-        altDefaultUserName : RegistryResult option
-        altDefaultPassword : RegistryResult option
-        }
-
-    type AutorunSetting = {
-        location : string
-        value : RegistryResult option
-        }
-    
-    type AntiVirus = {
-        engine : string
-        productExe : string
-        reportingExe : string
-        }
-    
-    type ChromeBookmark = {
-        name : string
-        url : string
-        }
-    
-    type ChromeHistory = {
-        path : string
-        url : string list //comes from filesystem, not registry
-        }
-
-    type ChromeInfo = {
-        bookmarks : ChromeBookmark list
-        history : ChromeHistory
-        }
-
-    type EnvironmentVar = {
-        environmentKey : string
-        environmentVal : string
-        }
-
-    type FirefoxHistory = {
-        path : string
-        url : string list
-        }
-
-    type FirefoxInfo = {
-        history : FirefoxHistory list
-        }
-    
-    type HistoryIE = {
-        path : string
-        url : RegistryResult option
-        }
-
-    type InternetSettings = {
-        proxyServer : RegistryResult option
-        proxyOverride : RegistryResult option
-        proxyEnable : RegistryResult option
-        }
-
-    type LapsSettings = {
-        lapsAdminAccountName : RegistryResult option
-        lapsPasswordComplexity : RegistryResult option
-        lapsPasswordLength : RegistryResult option
-        lapsPasswdProtection : RegistryResult option
-        }
-
-    type LocalGroup = {
-        name : string
-        sid : string
-        members : string list
-        }
-
-    type LSASettings = {
-        lsaPid : RegistryResult option
-        notificationPkgs : RegistryResult option
-        authorizationPkgs : RegistryResult option
-        prodType : RegistryResult option
-        limitBlankPwd : RegistryResult option
-        secureboot : RegistryResult option
-        disdomcreds : RegistryResult option
-        everyoneAnon : RegistryResult option
-        forceGuest: RegistryResult option
-        restrictAnon : RegistryResult option
-        restrictSAM : RegistryResult option
-        samConnAccnt : RegistryResult option
-        }
-
-    type MappedDrive = {
-        connectionState : string
-        localName : string
-        persistent : string
-        remoteName : string
-        remotePath : string
-        status : string
-        userName : string
-        }
-    
-    type Patch = {
-        description : string
-        hotfixId : string
-        installedOn : string}
-
-    
-    type PowerShellEnv = {
-        poshVersion2 : RegistryResult option 
-        poshVersion5 : RegistryResult option 
-        poshTLog : RegistryResult option []
-        poshMLog : RegistryResult option []
-        poshSLog : RegistryResult option []
-        }
-
-    type RDPSavedConnection = {
-        host : string
-        usernameHint : RegistryResult option
-        }
-
-    type RecentCommand = {
-        recentCommand : RegistryResult option
-        }
-
-    type ServiceBinaryPath = 
-        |Unquoted_Path
-        |Quoted_Path
-
-    type Service = {
-        serviceName : string 
-        serviceDisplayname : string 
-        serviceCompany : string 
-        serviceDescription : string 
-        serviceRunning : string 
-        serviceStarttype : string 
-        serviceIsdotnet : bool 
-        serviceBinpath : string
-        }
-
-    type Share = {
-        shareName : string 
-        shareDesc : string 
-        sharePath : string 
-        }
-
-    type SysmonConfig = {
-        hashingAlgorithm : RegistryResult option
-        options : RegistryResult option
-        rules : RegistryResult option
-        }
-    
-    type UACPolicies = {
-        //Will need to do some logic with these values to print restiction
-        //information at export.
-        consentPromptBehavior : RegistryResult option
-        enableLUA : RegistryResult option
-        localAccountTokenFilterPolicy : RegistryResult option
-        filterAdministratorToken : RegistryResult option
-        }
-
-    type User = { 
-         name : string
-         domain : string
-         sid: string
-         groups : (string * string) list
-         }
- 
-    type WEFSettings = {
-        //Potentially huge keyspace makes anything more specific untenable
-        policies : RegistryResult option []
-        }
-
-
-    ////////////////////////////
-    //System dynamic Attributes
-    ////////////////////////////
-    
     [<Flags>]
     type KERB_TICKET_FLAGS =
         |reserved = 2147483648u
@@ -406,6 +117,258 @@ module Fetters.DomainTypes
         kerberosTGTcontents : KerberosTicket list
         }
 
+    type RdpSession = {
+        state : string
+        sessionID : int
+        sessionName : string
+        hostName : string
+        username : string
+        remoteAddress : Net.IPAddress
+        }
+
+    type TCPConnection = {
+        localAddress : IPAddress
+        remoteAddress : IPAddress
+        localport : uint16
+        remoteport : uint16
+        connectionState : string
+        pid : uint32
+        service : string option
+        }
+
+    type TokenPrivileges = {
+         privileges : string list
+        }
+
+    type UDPListener = {
+        localAddress : IPAddress
+        localport : uint16
+        pid : uint32
+        service : string option
+        }
+    
+    type VaultRecord = {
+        name : string
+        resource : string option
+        identity : string option
+        packageSid : string option
+        credential : string option
+        lastModified : DateTime
+        }
+
+    type FettersPInvokeRecord = 
+        |ArpTable of ArpTable
+        |DomainSession of DomainSession
+        |RdpSession of RdpSession
+        |TCPConnection of TCPConnection
+        |TokenPrivileges of TokenPrivileges
+        |UDPListener of UDPListener
+        |VaultRecord of VaultRecord
+
+    ////////////////
+    //Registry Types
+    ////////////////
+
+    type AuditSettings = {
+        processauditing : RegistryResult option
+        }
+
+    type AutoLogonSettings = {
+        defaultDomainName : RegistryResult option
+        defaultUserName : RegistryResult option
+        defaultPassword : RegistryResult option
+        altDefaultDomainName : RegistryResult option
+        altDefaultUserName : RegistryResult option
+        altDefaultPassword : RegistryResult option
+        }
+
+    type AutorunSetting = {
+        location : string
+        value : RegistryResult option
+        }
+    
+    type HistoryIE = {
+        path : string
+        url : RegistryResult option
+        }
+
+    type InternetSettings = {
+        proxyServer : RegistryResult option
+        proxyOverride : RegistryResult option
+        proxyEnable : RegistryResult option
+        }
+
+    type LapsSettings = {
+        lapsAdminAccountName : RegistryResult option
+        lapsPasswordComplexity : RegistryResult option
+        lapsPasswordLength : RegistryResult option
+        lapsPasswdProtection : RegistryResult option
+        }
+  
+    type LSASettings = {
+        lsaPid : RegistryResult option
+        notificationPkgs : RegistryResult option
+        authorizationPkgs : RegistryResult option
+        prodType : RegistryResult option
+        limitBlankPwd : RegistryResult option
+        secureboot : RegistryResult option
+        disdomcreds : RegistryResult option
+        everyoneAnon : RegistryResult option
+        forceGuest: RegistryResult option
+        restrictAnon : RegistryResult option
+        restrictSAM : RegistryResult option
+        samConnAccnt : RegistryResult option
+        }
+
+    type PuttySSHSession = {
+        hostname : RegistryResult option
+        username : RegistryResult option
+        publicKeyFile : RegistryResult option
+        portForwardings : RegistryResult option
+        connectionSharing : RegistryResult option
+        }
+
+    type PuttyHostPublicKeys = {
+        recentHostKeys : RegistryResult option
+        }
+
+    type PowerShellEnv = {
+        poshVersion2 : RegistryResult option 
+        poshVersion5 : RegistryResult option 
+        poshTLog : RegistryResult option []
+        poshMLog : RegistryResult option []
+        poshSLog : RegistryResult option []
+        }
+
+    type RDPSavedConnection = {
+        host : string
+        usernameHint : RegistryResult option
+        }
+
+    type RecentCommand = {
+        recentCommand : RegistryResult option
+        }
+    type SysmonConfig = {
+        hashingAlgorithm : RegistryResult option
+        options : RegistryResult option
+        rules : RegistryResult option
+        }
+    
+    type UACPolicies = {
+        //Will need to do some logic with these values to print restiction
+        //information at export.
+        consentPromptBehavior : RegistryResult option
+        enableLUA : RegistryResult option
+        localAccountTokenFilterPolicy : RegistryResult option
+        filterAdministratorToken : RegistryResult option
+        }
+
+    type WEFSettings = {
+          //Potentially huge keyspace makes anything more specific untenable
+          policies : RegistryResult option []
+          }
+
+    type FettersRegistryRecord =
+        |AuditSettings of AuditSettings
+        |AutoLogonSettings of AutoLogonSettings
+        |AutorunSetting of AutorunSetting
+        |HistoryIE of HistoryIE
+        |InternetSettings of InternetSettings
+        |LapsSettings of LapsSettings
+        |LSASettings of LSASettings
+        |PuttyHostPublicKeys of PuttyHostPublicKeys
+        |PuttySSHSession of PuttySSHSession
+        |PowerShellEnv of PowerShellEnv
+        |RDPSavedConnection of RDPSavedConnection
+        |RecentCommand of RecentCommand
+        |SysmonConfig of SysmonConfig
+        |UACPolicies of UACPolicies
+        |WEFSettings of WEFSettings
+    
+    //////////////////////////////
+    //Filesystem Enumeration Types
+    //////////////////////////////
+
+    type AWSCredential = {
+        path : string
+        encodedFile : string
+        }
+
+    type AzureCredential = {
+        path : string
+        encodedFile : string
+        }
+    
+    type ChromeBookmark = {
+        name : string
+        url : string
+        }
+    
+    type ChromeHistory = {
+        path : string
+        url : string list //comes from filesystem, not registry
+        }
+
+    type ChromeInfo = {
+        bookmarks : ChromeBookmark list
+        history : ChromeHistory
+        }
+
+    type DPAPIMasterKey = {
+          userSID : string 
+          encodedBlob : string 
+          }
+
+    type DPAPICredFile = {
+          path : string
+          description : string
+          encodedBlob : string
+          }
+
+    type FirefoxHistory = {
+        path : string
+        url : string list
+        }
+
+    type FirefoxInfo = {
+        history : FirefoxHistory list
+        }
+    
+    type GoogleCredential = {
+        path : string 
+        encodedFile : string 
+        }
+
+    type Credential = 
+        |AWSCredential of AWSCredential
+        |AzureCredential of AzureCredential
+        |DPAPIMasterKey of DPAPIMasterKey
+        |DPAPICredFile of DPAPICredFile
+        |GoogleCredential of GoogleCredential
+
+    type FettersFilesystemRecord = 
+        |Credential of Credential
+        |FirefoxInfo of FirefoxInfo
+        |ChromeInfo of ChromeInfo
+
+    ///////////////
+    //Special Types
+    ///////////////
+
+    
+    
+    type CurrentSession = {
+        username : string 
+        cwd : string
+        isHighIntegrity : bool
+        isLocalAdmin : bool
+        }
+    
+    type EnvironmentVar = {
+        environmentKey : string
+        environmentVal : string
+        }
+
     type Event4624 = {
         eventId : uint16
         timeStamp : string
@@ -436,53 +399,140 @@ module Fetters.DomainTypes
         ipAddress : string
         }
 
-    type InterestingProcess = {
-        reason : string
-        description : string}
+    type FirewallRule = {
+        name : string
+        description: string
+        protocol : string
+        applicationName: string
+        localAddresses : string
+        localPorts : string
+        remoteAddresses : string
+        remotePorts : string
+        direction : string
+        profiles : string
+        }
+    
+    type Firewall = {
+        profile : string
+        rules : FirewallRule list
+        }
 
+    type Interface = {
+        adapterIndex : uint16
+        adapterAddr : IPAddress
+        adapterMAC : string
+        gatewayAddr : IPAddress
+        dnsServers : IPAddress list
+        dhcpServers : IPAddress list
+        arpTable : ArpTable
+        }
+
+    type Network = {
+        interfaces : Interface list
+        }
+
+    type PC = {
+        hostname : string
+        processorCount : int
+        }
+
+    type User = { 
+        name : string
+        domain : string
+        sid: string
+        groups : (string * string) list
+        }
+
+    type ServiceBinaryPath = 
+          |Unquoted_Path
+          |Quoted_Path
+
+    type WindowsDetails = {
+        productName: RegistryResult option
+        releaseId : RegistryResult option 
+        currentBuild: RegistryResult option
+        arch : string
+        buildBranch : RegistryResult option
+        currentSession : CurrentSession
+        }
+
+    type FettersSpecialRecord = 
+        |CurrentSession of CurrentSession
+        |EnvironmentVar of EnvironmentVar
+        |Event4624 of Event4624
+        |Event4648 of Event4648
+        |Firewall of Firewall     
+        |Network of Network
+        |PC of PC
+        |User of User
+        |WindowsDetails of WindowsDetails
+
+    ///////////
+    //WMI Types
+    ///////////
+
+    type AntiVirus = {
+        engine : string
+        productExe : string
+        reportingExe : string
+        }
+
+    type Disk = {
+        name : string
+        size: string
+        filesystem : string
+        }
+    
+    type InterestingProcess = {
+         reason : string
+         description : string}
+
+    type LocalGroup = {
+        name : string
+        sid : string
+        members : string list
+        }
+    
+    type MappedDrive = {
+        connectionState : string
+        localName : string
+        persistent : string
+        remoteName : string
+        remotePath : string
+        status : string
+        userName : string
+        }
+    
+    type Patch = {
+        description : string
+        hotfixId : string
+        installedOn : string}
+    
     type Process = {
         processName : string 
         pid : string
         processBinpath : string 
         processInvocation : string 
         processOwner : string
-        //InterestingProcess : InterestingProcess option
+         //InterestingProcess : InterestingProcess option
         }
 
-    type RdpSession = {
-        state : string
-        sessionID : int
-        sessionName : string
-        hostName : string
-        username : string
-        remoteAddress : Net.IPAddress
+    type Service = {
+        serviceName : string 
+        serviceDisplayname : string 
+        serviceCompany : string 
+        serviceDescription : string 
+        serviceRunning : string 
+        serviceStarttype : string 
+        serviceIsdotnet : bool 
+        serviceBinpath : string
         }
-
-    type TCPConnection = {
-        localAddress : IPAddress
-        remoteAddress : IPAddress
-        localport : uint16
-        remoteport : uint16
-        connectionState : string
-        pid : uint32
-        service : string option
+    
+    type Share = {
+        shareName : string 
+        shareDesc : string 
+        sharePath : string 
         }
-
-    type TokenPrivileges = {
-         privileges : string list
-        }
-
-    type UDPListener = {
-        localAddress : IPAddress
-        localport : uint16
-        pid : uint32
-        service : string option
-        }
-
-
-    /////////////////////////
-    // WMI Query Module Types
-    /////////////////////////
 
     type WmiQueryType = {
         wmiSqlQuery: string
@@ -504,8 +554,6 @@ module Fetters.DomainTypes
         |SService
         |SUser
     
-    type Null = Null of string
-
     type WmiRecord = 
         |AV of AntiVirus
         |Disk of Disk
@@ -516,31 +564,8 @@ module Fetters.DomainTypes
         |Patch of Patch
         |Process of Process
         |User of User
-        |Null of Null
 
 
-    ////////////////////
-    // Native Call Types
-    ////////////////////
-
-    //The handles and pointers for the Kerberos enumeration are difficult to track 
-    //because of the enormous code structure differences between Seatbelt and Fetters. 
-    //To help keep the handles and pointers straight, make them Types.
-
-    type LsaProcessHandle = LsaProcessHandle of IntPtr
-
-    type LsaAuthPackage = LsaAuthPackage of int
-
-    type LUIDPtr = LUIDPtr of IntPtr
-
-    type VaultGuid = VaultGuid of IntPtr
-
-    type VaultPtr = VaultPtr of IntPtr
-
-    type VaultItemPtr = VaultItemPtr of IntPtr
-
-    type VaultHandle = VaultHandle of IntPtr
-    
     ///////////////
     //Program Types
     ///////////////
@@ -578,3 +603,11 @@ module Fetters.DomainTypes
         fullHelp : bool
         functionGroup : string list
         }
+
+    type FettersRecords = 
+        |FettersFilesystemRecord of FettersFilesystemRecord
+        |FettersPInvokeRecord of FettersPInvokeRecord
+        |FettersRegistryRecord of FettersRegistryRecord
+        |FettersSpecialRecord of FettersSpecialRecord
+        |WmiRecord of WmiRecord
+        

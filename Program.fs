@@ -13,8 +13,6 @@ open Fetters.Registry.Provider
 //Init
 //////
 
-
-
 let initialSetup () =
     let s = buildSystemDriveRoot ()
     let l = getLocalUserFolders s
@@ -24,6 +22,14 @@ let initialSetup () =
     let wWeek = createWeekTimeWindow ()
 
     {sysRoot = s; luserFolders = l; localAdmin = lAdm; highIntegrity = hi; now = now; windowWeek = wWeek}
+
+let recordPrinter record =
+    match record with
+    |FettersFilesystemRecord r-> printFRecord r
+    |FettersPInvokeRecord r -> printPRecord r
+    |FettersRegistryRecord r -> printRRecord r
+    |FettersSpecialRecord r -> printSRecord r
+    |WmiRecord r -> printWRecord r
 
 let (|FunctionName|_|) (functionname: string) = 
     if functionNames |> List.contains (functionname.ToLower()) then Some (functionname.ToLower()) else None
@@ -58,7 +64,7 @@ let rec createArgumentRecord args (initArgs:ProgramArguments ) : ProgramArgument
 
 let printTerseHelp () =
     "FETTERS" |> centerPrint |> cPrinter Yellow
-    "release: beta" |> centerPrint |> cPrinter Yellow
+    "release: beta 2" |> centerPrint |> cPrinter Yellow
     printfn "\n\n"
     "fetters [group]" |> leftTenthPrint |> cPrinter Yellow
     "fetters [functionname..]" |> leftTenthPrint |> cPrinter Yellow
@@ -114,7 +120,7 @@ let printFullHelp () =
     ("getautorunvalues", "Lists autorun registry values") |> splitPrint
     ("listsysmonconfig", "Queries Sysmon regkeys if present and elevated") |> splitPrint
     printfn ""
-    "'user checks:" |> gPrinter Asterisk |> cPrinter Green
+    "'user' checks:" |> gPrinter Asterisk |> cPrinter Green
     ("triagefirefox", "Dumps Firefox history information") |> splitPrint
     ("triagechrome", "Dumps Chrome history and bookmarks") |> splitPrint
     ("getdpapimasterkeys", "Dumps all accessible DPAPI blobs in base64 form") |> splitPrint
@@ -176,17 +182,25 @@ let matchFunctionAndRun (uFolders: string array) highBool now week (func: string
     |"querywmi-disk" -> queryWMI SDisk |> printfn "%A"
     |"querywmi-group" -> queryWMI SGroup |> printfn "%A"
     |"querywmi-user" -> queryWMI SUser |> printfn "%A"
-    |"triagefirefox" -> uFolders |> Array.map triageFirefox  |> printfn "%A"
-    |"triagechrome" -> uFolders |> Array.map triageChrome  |> printfn "%A"
-    |"getdpapimasterkeys" -> uFolders |> getDPAPIMasterKeys  |> printfn "%A"
-    |"getcredfiles" -> uFolders |> getCredFiles |> printfn "%A"
+    |"triagefirefox" -> 
+        "\n===== Triage Firefox =====" |> cPrinter Yellow
+        uFolders |> Array.map triageFirefox |> Array.iter printFRecord
+    |"triagechrome" -> 
+        "\n===== Triage Chrome =====" |> cPrinter Yellow
+        uFolders |> Array.map triageChrome |> Array.iter printFRecord
+    |"getdpapimasterkeys" -> 
+        "\n===== DPAPI Master Keys =====" |> cPrinter Yellow
+        uFolders |> getDPAPIMasterKeys |> List.iter printFRecord
+    |"getcredfiles" -> 
+        "\n===== DPAPI Credential Files =====" |> cPrinter Yellow
+        uFolders |> getDPAPICredFiles |> List.iter printFRecord
     |"detectrdcmanfile" -> uFolders |> detectRDCManFile |> printfn "%A"
-    |"getgooglecloudcreds"  -> uFolders |> getGoogleCloudCreds  |> printfn "%A"
-    |"getgooglecloudcredsl" -> uFolders |> getGoogleCloudCredsL |> printfn "%A"
-    |"getgoogleaccesstokens" -> uFolders |> getGoogleAccessTokens |> printfn "%A"
-    |"getazuretokens" -> uFolders |> getAzureTokens |> printfn "%A"
-    |"getazureprofile" -> uFolders |> getAzureProfile |> printfn "%A"
-    |"getawscreds" -> uFolders |> getAWSCreds |> printfn "%A"
+    |"getgooglecloudcreds"  -> uFolders |> getGoogleCloudCreds  |> List.iter printFRecord
+    |"getgooglecloudcredsl" -> uFolders |> getGoogleCloudCredsL |> List.iter printFRecord
+    |"getgoogleaccesstokens" -> uFolders |> getGoogleAccessTokens |> List.iter printFRecord
+    |"getazuretokens" -> uFolders |> getAzureTokens |> List.iter printFRecord
+    |"getazureprofile" -> uFolders |> getAzureProfile |> List.iter printFRecord
+    |"getawscreds" -> uFolders |> getAWSCreds |> List.iter printFRecord
     |"getrdpsavedconnections" -> getRDPSavedConnections () |> printfn "%A"
     |"getrecentcommands" -> getRecentCommands () |> printfn "%A"
     |"getputtysessions" -> getPuttySessions () |> printfn "%A"
@@ -198,6 +212,10 @@ let matchFunctionAndRun (uFolders: string array) highBool now week (func: string
     |"geteventlog4648" -> if highBool then getEventLog4648 week now |> printfn "%A" else printfn "Lack privs to open Security log"
     |"querywmi-patches" -> queryWMI SPatches |> printfn "%A"
     |_ -> printf ""
+
+
+
+
 
 [<EntryPoint>]
 let main sysargs =

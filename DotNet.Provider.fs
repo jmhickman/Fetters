@@ -46,18 +46,19 @@
     let private extractChromeBookmarks (path: string) : ChromeBookmark list =
         let cPath = path + "\\" + "AppData\\Local\\Google\\Chrome\\User Data\\Default\\Bookmarks"
         match fileExistsAtLocation cPath with
-        |true -> let bookmarks = ChromeBookmarkJ.Parse(yieldWholeFile cPath)
-                 bookmarks.Roots.BookmarkBar.Children 
-                 |> Array.map(fun b -> {name = b.Name; url = b.Url})
-                 |> Array.toList
+        |true ->
+            let bookmarks = ChromeBookmarkJ.Parse(yieldWholeFile cPath)
+            bookmarks.Roots.BookmarkBar.Children 
+            |> Array.map(fun b -> {name = b.Name; url = b.Url})
+            |> Array.toList
         |false -> []
 
 
-    let triageChrome (path: string) : ChromeInfo =
+    let triageChrome (path: string) : FettersFilesystemRecord =
         //Fed by a collection of user paths
         let b = extractChromeBookmarks path
         let h = extractChromeHistory path
-        {bookmarks = b; history = h}
+        {bookmarks = b; history = h} |> FettersFilesystemRecord.ChromeInfo
         
     
     let private getFirefoxProfiles (path: string) =
@@ -81,10 +82,10 @@
 
         |false -> {path = ""; url = []}
 
-    let triageFirefox path : FirefoxInfo =
+    let triageFirefox path : FettersFilesystemRecord =
         let fpath = getFirefoxProfiles path |> Array.map extractFirefoxHistory |> Array.toList
         
-        {history = fpath}
+        {history = fpath} |> FettersFilesystemRecord.FirefoxInfo
 
     ///////////////////
     //Event Enumeration
@@ -185,7 +186,7 @@
     //Secrets Enumeration
     /////////////////////
 
-    let getDPAPIMasterKeys userFolders : DPAPIMasterKey list =
+    let getDPAPIMasterKeys userFolders : FettersFilesystemRecord list =
         userFolders
         |> Array.map(fun u -> u + "\\" + "AppData\\Roaming\\Microsoft\\Protect\\")
         |> Array.filter dirExistsAtLocation
@@ -199,11 +200,12 @@
         |> Array.map(fun d ->
             let token = d.Split('\\')
             let sid = token.[token.Length-2]
-            {userSID = sid; encodedBlob = encodeEntireFileB64 d})
+            {userSID = sid; encodedBlob = encodeEntireFileB64 d}
+            |> Credential.DPAPIMasterKey |> FettersFilesystemRecord.Credential)
         |> Array.toList
 
         
-    let getCredFiles userFolders : DPAPICredFile list =
+    let getDPAPICredFiles userFolders : FettersFilesystemRecord list =
         userFolders
         |> Array.map(fun u -> u + "\\" + "AppData\\Local\\Microsoft\\Credentials\\")
         |> Array.filter dirExistsAtLocation
@@ -213,7 +215,8 @@
             let mguid = new Guid(getByteSection 36L 16 p)
             let strlen = BitConverter.ToInt32((getByteSection 56L 4 p), 0)
             let credtype = Encoding.Unicode.GetString(getByteSection 60L (strlen - 6) p)
-            {path = p; description = credtype; encodedBlob = encodeEntireFileB64 p })
+            {path = p; description = credtype; encodedBlob = encodeEntireFileB64 p } 
+            |> Credential.DPAPICredFile |> FettersFilesystemRecord.Credential)
         |> Array.toList
 
 
@@ -225,67 +228,75 @@
         |> Array.toList
 
 
-    let getGoogleCloudCreds userFolders : GoogleCredential list =
+    let getGoogleCloudCreds userFolders : FettersFilesystemRecord list =
         userFolders
         |> Array.map(fun u -> u + "\\" + "AppData\\Roaming\\gcloud\\credentials.db")
         |> Array.filter fileExistsAtLocation
         |> Array.map(fun f -> 
-            {GoogleCredential.path = f; encodedFile = encodeEntireFileB64 f})
+            {GoogleCredential.path = f; encodedFile = encodeEntireFileB64 f}
+            |> Credential.GoogleCredential |> FettersFilesystemRecord.Credential)
         |> Array.toList
 
 
-    let getGoogleCloudCredsL userFolders : GoogleCredential list =
+    let getGoogleCloudCredsL userFolders : FettersFilesystemRecord list =
         userFolders
         |> Array.map(fun u -> u + "\\" + "AppData\\Roaming\\gcloud\\legacy_credentials.db")
         |> Array.filter fileExistsAtLocation
         |> Array.map(fun f -> 
-            {GoogleCredential.path = f; encodedFile = encodeEntireFileB64 f})
+            {GoogleCredential.path = f; encodedFile = encodeEntireFileB64 f}
+            |> Credential.GoogleCredential |> FettersFilesystemRecord.Credential)
         |> Array.toList
     
     
-    let getGoogleAccessTokens userFolders : GoogleCredential list =
+    let getGoogleAccessTokens userFolders : FettersFilesystemRecord list =
         userFolders
         |> Array.map(fun u -> u + "\\" + "AppData\\Roaming\\gcloud\\access_tokens.db")
         |> Array.filter fileExistsAtLocation
         |> Array.map(fun f -> 
-            {GoogleCredential.path = f; encodedFile = encodeEntireFileB64 f})
+            {GoogleCredential.path = f; encodedFile = encodeEntireFileB64 f}
+            |> Credential.GoogleCredential |> FettersFilesystemRecord.Credential)
         |> Array.toList
 
     
-    let getAzureTokens userFolders : AzureCredential list =
+    let getAzureTokens userFolders : FettersFilesystemRecord list =
         userFolders
         |> Array.map(fun u -> u + "\\" + ".azure\\accessTokens.json")
         |> Array.filter fileExistsAtLocation
         |> Array.map(fun f -> 
-            {AzureCredential.path = f; encodedFile = encodeEntireFileB64 f})
+            {AzureCredential.path = f; encodedFile = encodeEntireFileB64 f}
+            |> Credential.AzureCredential |> FettersFilesystemRecord.Credential)
         |> Array.toList
 
 
-    let getAzureProfile userFolders : AzureCredential list =
+    let getAzureProfile userFolders : FettersFilesystemRecord list =
         userFolders
         |> Array.map(fun u -> u + "\\" + ".azure\\azureProfile.json")
         |> Array.filter fileExistsAtLocation
         |> Array.map(fun f -> 
-            {AzureCredential.path = f; encodedFile = encodeEntireFileB64 f})
+            {AzureCredential.path = f; encodedFile = encodeEntireFileB64 f}
+            |> Credential.AzureCredential |> FettersFilesystemRecord.Credential)
         |> Array.toList
 
 
-    let getAWSCreds userFolders : AWSCredential list =
+    let getAWSCreds userFolders : FettersFilesystemRecord list =
         userFolders
         |> Array.map(fun u -> u + "\\" + ".aws\\credentials")
         |> Array.filter fileExistsAtLocation
         |> Array.map(fun f -> 
-            {AWSCredential.path = f; encodedFile = encodeEntireFileB64 f})
+            {AWSCredential.path = f; encodedFile = encodeEntireFileB64 f}
+            |> Credential.AWSCredential |> FettersFilesystemRecord.Credential)
         |> Array.toList
 
 
-    let getSystemEnvVariables () : EnvironmentVar list =
+    let getSystemEnvVariables () : FettersSpecialRecord list =
         let evDict = Environment.GetEnvironmentVariables(EnvironmentVariableTarget.Machine)
         [for key in evDict.Keys do
-            {environmentKey = unbox<string> key; environmentVal = unbox<string> evDict.[key]}]
+            {environmentKey = unbox<string> key; environmentVal = unbox<string> evDict.[key]}
+            |> FettersSpecialRecord.EnvironmentVar]
 
 
-    let getUserEnvVariables () : EnvironmentVar list =
+    let getUserEnvVariables () : FettersSpecialRecord list =
         let evDict = Environment.GetEnvironmentVariables(EnvironmentVariableTarget.User)
         [for key in evDict.Keys do
-            {environmentKey = unbox<string> key; environmentVal = unbox<string> evDict.[key]}]
+            {environmentKey = unbox<string> key; environmentVal = unbox<string> evDict.[key]}
+            |> FettersSpecialRecord.EnvironmentVar]

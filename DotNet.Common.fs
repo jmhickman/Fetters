@@ -89,6 +89,96 @@
         printfn "%s%*s%s" text1 spacer "" text2
 
 
+    let printCredentialRecord record =
+        match record with
+        |AWSCredential r ->
+            sprintf "Original Path: %s" r.path |> cPrinter Blue
+            printfn "Base64 File: %s"r.encodedFile
+        |GoogleCredential r ->
+            sprintf "Original Path: %s" r.path |> cPrinter Blue
+            printfn "Base64 File: %s" r.encodedFile
+        |AzureCredential r -> 
+            sprintf "Original Path: %s" r.path |> cPrinter Blue
+            printfn "Base64 File: %s" r.encodedFile
+        |DPAPIMasterKey r -> 
+            sprintf "Original SID: %s" r.userSID |> cPrinter Blue
+            printfn "Base64 File: %s" r.encodedBlob
+        |DPAPICredFile r ->
+            sprintf "Original Path: %s" r.path |> cPrinter Blue
+            printfn "Description: %s" r.description
+            printfn "Base64 File: %s" r.encodedBlob
+            
+
+    let printFRecord record =
+        match record with
+        |Credential r -> printCredentialRecord r
+        |FirefoxInfo r ->
+            r.history 
+            |> List.iter(fun rr ->
+                sprintf "User path: %s" rr.path |> cPrinter Blue
+                rr.url |> List.iter (printfn "%s"))
+        |ChromeInfo r ->
+            sprintf "User path: %s" r.history.path |> cPrinter Blue
+            r.history.url
+            |> List.iter (printfn "%s")
+
+    let printPRecord record = 
+        match record with
+        |ArpTable r -> ()
+        |DomainSession r -> ()
+        |RdpSession r -> ()
+        |TCPConnection r -> ()
+        |UDPListener r -> ()
+        |TokenPrivileges r -> ()
+        |VaultRecord r -> ()
+
+
+    let printRRecord record = 
+        match record with
+        |AuditSettings r -> ()
+        |AutoLogonSettings r -> ()
+        |AutorunSetting r -> ()
+        |HistoryIE r -> ()
+        |InternetSettings r -> ()
+        |LapsSettings r -> ()
+        |LSASettings r -> ()
+        |PuttyHostPublicKeys r -> ()
+        |PuttySSHSession r -> ()
+        |PowerShellEnv r -> ()
+        |RDPSavedConnection r -> ()
+        |RecentCommand r -> ()
+        |SysmonConfig r -> ()
+        |UACPolicies r -> ()
+        |WEFSettings r -> ()
+
+
+    let printSRecord record = 
+        match record with
+        |CurrentSession r -> ()
+        |EnvironmentVar r -> ()
+        |Event4624 r -> ()
+        |Event4648 r -> ()
+        |Firewall r -> ()
+        |Network r -> ()
+        |PC r -> ()
+        |FettersSpecialRecord.User r -> ()
+        |WindowsDetails r -> ()
+
+
+
+    let printWRecord record = 
+        match record with
+        |AV r -> ()
+        |Disk r -> ()
+        |Group r -> ()
+        |MappedDrive r -> ()
+        |Service r -> ()
+        |NetworkShare r -> ()
+        |Patch r -> ()
+        |Process r -> ()
+        |User r -> ()
+
+
 
     /////////////////////////////////////
     //Common Windows User/Group functions
