@@ -61,7 +61,7 @@
 
     let centerPrint (text:string) =
         let halfpad = (Console.WindowWidth - text.Length ) / 2
-        sprintf "%*s%s%-*s" halfpad "" text halfpad ""
+        sprintf "\n%*s%s%-*s" halfpad "" text halfpad ""
 
 
     let leftQuarPrint text = 
@@ -87,6 +87,17 @@
     let splitPrint (text1:string, text2:string) = 
         let spacer = Console.WindowWidth - (text1.Length + text2.Length)
         printfn "%s%*s%s" text1 spacer "" text2
+
+    
+    let regValuePrint regV =
+        match regV with
+        |String s -> sprintf "%s" s
+        |ExpandString s -> sprintf "%s" s
+        |MultiString ss -> 
+            Array.fold(fun s -> sprintf "%s ") "" ss
+        |Binary b -> Convert.ToBase64String(b)
+        |DWord i -> sprintf "%i" i
+        |QWord i -> sprintf "%i" i
 
 
     let printCredentialRecord record =
@@ -154,29 +165,128 @@
 
     let printSRecord record = 
         match record with
-        |CurrentSession r -> ()
-        |EnvironmentVar r -> ()
-        |Event4624 r -> ()
-        |Event4648 r -> ()
-        |Firewall r -> ()
+        |EnvironmentVar r ->
+            sprintf "Key: %s" r.environmentKey |> cPrinter Blue
+            sprintf "Value: %s" r.environmentVal |> printfn "%s\n"
+        |Event4624 r ->
+            printfn "Subject User: %s\%s" r.subjectDomainname r.subjectUsername
+            printfn "User SID: %s" r.subjectSID
+            printfn "LogonID: %s" r.subjectLogonId
+            printfn "Target User: %s\%s" r.targetDomainname r.targetUsername
+            printfn "Target SID: %s" r.targetUserSID
+            printfn "Remote IP: %s" r.ipAddress
+            printfn "Logon Type: %s" r.logonType
+            printfn "Local Process: %s" r.processName
+        |Event4648 r ->
+            printfn "Subject User: %s\%s" r.subjectDomainname r.subjectUsername
+            printfn "User SID: %s" r.subjectSID
+            printfn "LogonID: %s" r.subjectLogonId
+            printfn "Target User: %s\\%s\%s" r.targetDomainname r.targetServername r.targetUsername
+            printfn "Remote IP: %s" r.ipAddress
+            printfn "Local Process: %s" r.processName
+            printfn "Time: %s" r.timeStamp
+        |Firewall r ->
+            sprintf "Firewall Profile: %s" r.profile |> cPrinter Blue
+            r.rules 
+            |> List.iter(fun f -> 
+                printfn "Rule Name: %s" f.name
+                printfn "Rule Description: %s" f.description
+                printfn "Protocol number: %s" f.protocol
+                printfn "Binary Name: %s" f.applicationName
+                printfn "Binding addresses: %s" f.localAddresses
+                printfn "Binding ports: %s" f.localPorts
+                printfn "Remote addresses: %s" f.remoteAddresses
+                printfn "Remote ports: %s" f.remotePorts
+                printfn "Direction: %s" f.direction
+                printfn "Applied to profiles: %s\n" f.profiles)
         |Network r -> ()
-        |PC r -> ()
-        |FettersSpecialRecord.User r -> ()
-        |WindowsDetails r -> ()
+        |PC r ->
+            sprintf "Hostname: %s" r.hostname |> cPrinter Blue
+            sprintf "Processor Core count: %i" r.processorCount |> cPrinter Blue
+        |WindowsDetails r ->
+            printfn "User: %s" r.currentSession.username
+            printfn "Current Working Directory: %s" r.currentSession.cwd
+            match r.currentSession.isHighIntegrity, r.currentSession.isLocalAdmin with
+            |true, _ -> sprintf "Process is high integrity!" |> gPrinter Bang |> cPrinter Red
+            |false, true -> sprintf "Low-integrity process, but user is local administrator" |> gPrinter Plus |> cPrinter Green
+            |false, false -> sprintf "Low integrity process, user lacks administrative privileges" |> gPrinter Minus |> cPrinter Green
+            printfn "System architecture: %s" r.arch
+            match r.buildBranch with
+            |Some v -> 
+                printf "%s: " v.name
+                regValuePrint v.value |> printfn "%s"
+            |None -> printfn "No build retrieved"
+            match r.currentBuild with
+            |Some v -> 
+                printf "%s: " v.name
+                regValuePrint v.value |> printfn "%s"
+            |None -> printfn "No build retrieved"
+            match r.productName with
+            |Some v -> 
+                printf "%s: " v.name
+                regValuePrint v.value |> printfn "%s"
+            |None -> printfn "No productname retrieved"
+            match r.releaseId with
+            |Some v -> 
+                printf "%s: " v.name
+                regValuePrint v.value |> printfn "%s"
+            |None -> printfn "No release ID retrieved"
+
 
 
 
     let printWRecord record = 
         match record with
-        |AV r -> ()
-        |Disk r -> ()
-        |Group r -> ()
-        |MappedDrive r -> ()
-        |Service r -> ()
-        |NetworkShare r -> ()
-        |Patch r -> ()
-        |Process r -> ()
-        |User r -> ()
+        |AV r ->
+            printfn "Engine: %s" r.engine
+            printfn "Product Executable: %s" r.productExe
+            printfn "Reporting executable: %s\n" r.reportingExe
+        |Disk r ->
+            printfn "Name: %s" r.name
+            printfn "Size(GB): %i" <| (r.size |> uint64) / 1073741274UL
+            printfn "filesystem: %s\n" r.filesystem
+        |Group r ->
+            printfn "SID + Name: %s\%s" r.sid r.name
+            printfn "Members:"
+            match r.members with
+            |Some r -> r |> List.iter (printfn "%s")
+            |None -> printf "No members"
+            printfn ""
+        |MappedDrive r ->
+            printfn "Share name: %s" r.localName
+            printfn "Connected account name: %s" r.userName
+            printfn "State: %s" r.connectionState
+            printfn "Persistent: %s" r.persistent
+            printfn "Remote Path: %s" r.remotePath
+            printfn "Remote Name: %s\n" r.remoteName
+        |Service r ->
+            printfn "Service Name: %s" r.serviceName
+            printfn "Display Name: %s" r.serviceDisplayname
+            printfn "Company: %s" r.serviceCompany
+            printfn "Description: %s" r.serviceDescription
+            printfn "Binary path: %s" r.serviceBinpath
+            printfn "Startup-type: %s" r.serviceStarttype
+            printfn "Running: %s" r.serviceRunning
+            printfn "DotNet binary: %b\n" r.serviceIsdotnet
+        |NetworkShare r ->
+            printfn "Name: %s" r.shareName
+            printfn "Description: %s" r.shareDesc
+            printfn "Path: %s\n" r.sharePath
+        |Patch r ->
+            printfn "Description: %s" r.description
+            printfn "KB: %s" r.hotfixId
+            printfn "Install date: %s\n" r.installedOn
+        |Process r ->
+            printfn "PID\Process name: %s\%s" r.pid r.processName
+            printfn "Binary path: %s" r.processBinpath
+            printfn "Process arguments: %s" r.processInvocation
+            printfn "Owner: %s\n" r.processOwner
+        |User r ->
+            printfn "Current UPN: %s\%s" r.domain r.name
+            printfn "User SID: %s" r.sid
+            r.groups |> List.iter(fun rr -> printfn "SID: %s Name: %s" (fst rr) (snd rr))
+            printfn ""
+
 
 
 
@@ -266,6 +376,7 @@
     let getRegistrySubKeyNamesHKLM = getRegistrySubKeyNames HKEY_LOCAL_MACHINE
     
     //// Get Registry values ////
+
     let getRegistryValue 
         (name: string) (key: RegistryKey) : RegistryResult option =
         //This doesn't take an RegistryKey option because I don't want to reach

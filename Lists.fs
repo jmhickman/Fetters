@@ -120,7 +120,8 @@
         "ishighintegrity" //
         "triagechrome" //
         "triagefirefox" //
-        "getfirewallrules" //
+        "getfirewallrules-deny"//
+        "getfirewallrules-allow"//
         "geteventlog4624" //
         "geteventlog4648" //
         "getdpapimasterkeys" //

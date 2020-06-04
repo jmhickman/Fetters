@@ -355,8 +355,6 @@ module Fetters.DomainTypes
     //Special Types
     ///////////////
 
-    
-    
     type CurrentSession = {
         username : string 
         cwd : string
@@ -436,13 +434,6 @@ module Fetters.DomainTypes
         processorCount : int
         }
 
-    type User = { 
-        name : string
-        domain : string
-        sid: string
-        groups : (string * string) list
-        }
-
     type ServiceBinaryPath = 
           |Unquoted_Path
           |Quoted_Path
@@ -457,14 +448,12 @@ module Fetters.DomainTypes
         }
 
     type FettersSpecialRecord = 
-        |CurrentSession of CurrentSession
         |EnvironmentVar of EnvironmentVar
         |Event4624 of Event4624
         |Event4648 of Event4648
         |Firewall of Firewall     
         |Network of Network
         |PC of PC
-        |User of User
         |WindowsDetails of WindowsDetails
 
     ///////////
@@ -490,7 +479,7 @@ module Fetters.DomainTypes
     type LocalGroup = {
         name : string
         sid : string
-        members : string list
+        members : string list option
         }
     
     type MappedDrive = {
@@ -499,7 +488,6 @@ module Fetters.DomainTypes
         persistent : string
         remoteName : string
         remotePath : string
-        status : string
         userName : string
         }
     
@@ -532,6 +520,13 @@ module Fetters.DomainTypes
         shareName : string 
         shareDesc : string 
         sharePath : string 
+        }
+
+    type User = { 
+        name : string
+        domain : string
+        sid: string
+        groups : (string * string) list
         }
 
     type WmiQueryType = {

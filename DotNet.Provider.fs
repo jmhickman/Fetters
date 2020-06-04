@@ -27,7 +27,7 @@
             }
         let pc = {hostname = (NetworkInformation.IPGlobalProperties.GetIPGlobalProperties().DomainName + "\\" + Dns.GetHostName())
                   processorCount = Environment.ProcessorCount}
-        windowsDetails, pc
+        windowsDetails |> FettersSpecialRecord.WindowsDetails, pc |> FettersSpecialRecord.PC
 
     //////////////////////////
     //Browser Data Enumeration
@@ -91,7 +91,7 @@
     //Event Enumeration
     ///////////////////
 
-    let getEventLog4624 (week: DateTime) (now: DateTime) : Event4624 list =
+    let getEventLog4624 (week: DateTime) (now: DateTime) : FettersSpecialRecord list =
         let query = 
             sprintf "*[System/EventID=4624] and *[System[TimeCreated[@SystemTime >= '%s']]] and *[System[TimeCreated[@SystemTime <= '%s']]]" 
                 (week.ToUniversalTime().ToString("o")) 
@@ -116,10 +116,10 @@
              workstationName = e.[11]
              processName = e.[17]
              ipAddress = e.[18] 
-             })
+             } |> FettersSpecialRecord.Event4624)
         |> Seq.toList
         
-    let getEventLog4648 (week: DateTime) (now: DateTime) : Event4648 list = 
+    let getEventLog4648 (week: DateTime) (now: DateTime) : FettersSpecialRecord list = 
         let query = 
             sprintf "*[System/EventID=4648] and *[System[TimeCreated[@SystemTime >= '%s']]] and *[System[TimeCreated[@SystemTime <= '%s']]]" 
                 (week.ToUniversalTime().ToString("o")) 
@@ -141,7 +141,7 @@
              targetServername = e.[7]
              processName = e.[10]
              ipAddress = e.[11] 
-            })
+            } |> FettersSpecialRecord.Event4648)
         |> Seq.toList
 
     ///////////////////////////
@@ -175,12 +175,12 @@
             })
 
 
-    let getFirewallRules denyOnly : Firewall = 
+    let getFirewallRules denyOnly : FettersSpecialRecord = 
         match denyOnly with
         |true -> {profile = createFirewallObj() |> getFProfileProperty |> string
-                  rules = retrieveFirewallRules true}
+                  rules = retrieveFirewallRules true} |> FettersSpecialRecord.Firewall
         |false -> {profile = createFirewallObj() |> getFProfileProperty |> string
-                   rules = retrieveFirewallRules false}
+                   rules = retrieveFirewallRules false} |> FettersSpecialRecord.Firewall
 
     /////////////////////
     //Secrets Enumeration

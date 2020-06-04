@@ -4,6 +4,7 @@
     open System.Management
     open Fetters.DomainTypes
     open Fetters.DotNet.Common
+    open Fetters.PInvoke.Provider
 
     let private localScope semaphore : string = 
         match semaphore with
@@ -33,7 +34,7 @@
         |SNetworkShare -> new ObjectQuery "SELECT * FROM Win32_Share WHERE NOT Name LIKE '%$'"
         |SPatches -> new ObjectQuery "SELECT * FROM win32_quickfixengineering"
         |SProcess -> ObjectQuery "SELECT * FROM Win32_Process WHERE NOT Name LIKE '%svchost%' AND NOT Name LIKE '%conhost%'"
-        |SService -> new ObjectQuery "SELECT * FROM win32_service"
+        |SService -> new ObjectQuery "SELECT * FROM win32_service WHERE NOT PathName LIKE '%svchost%' AND NOT PathName LIKE '%conhost%' "
         |SUser -> new ObjectQuery "SELECT * FROM Win32_Account where SidType=1"
 
 
@@ -47,7 +48,7 @@
             |SAV -> ["DisplayName";"PathToSignedProductExe";"PathToSignedReportingExe"]
             |SDisk -> ["Name";"Size";"Filesystem"]
             |SGroup -> ["Name";"SID";]
-            |SMappedDrive -> ["ConnectionState";"LocalName";"Persistent";"RemoteName";"RemotePath";"Status";"UserName"]
+            |SMappedDrive -> ["ConnectionState";"LocalName";"Persistent";"RemoteName";"RemotePath";"UserName"]
             |SNetworkShare -> ["Name";"Description";"Path"]
             |SPatches -> ["Description";"HotfixId";"InstalledOn"]
             |SProcess -> ["Name";"ProcessId";"ExecutablePath";"CommandLine"]
@@ -93,7 +94,7 @@
                 let group = {
                     name = rawList.[0]
                     sid = rawList.[1]
-                    members = [""]
+                    members = getLocalGroupMembership rawList.[0]
                 }
                 group |> WmiRecord.Group)
         |SMappedDrive ->
@@ -105,8 +106,7 @@
                     persistent = rawList.[2]
                     remoteName = rawList.[3]
                     remotePath = rawList.[4]
-                    status = rawList.[5]
-                    userName = rawList.[6]
+                    userName = rawList.[5]
                 }
                 mappedDrive |> WmiRecord.MappedDrive)
         |SNetworkShare ->

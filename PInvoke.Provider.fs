@@ -982,7 +982,7 @@
         let groupMemberList = 
             members
             |> Array.filter(fun gmember -> not (gmember.lgrmi2_sid = IntPtr.Zero))
-            |> Array.map(fun gmember -> gmember.lgrmi2_domainandname) 
+            |> Array.map(fun gmember -> gmember.lgrmi2_domainandname.Trim()) 
             |> Array.toList 
         //None means there was an error in the NLGGM call, or the group doesn't exist. 
         match groupMemberList with
