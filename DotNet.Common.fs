@@ -63,6 +63,11 @@
         let halfpad = (Console.WindowWidth - text.Length ) / 2
         sprintf "\n%*s%s%-*s" halfpad "" text halfpad ""
 
+    
+    let centerPrintN (text:string) =
+        let halfpad = (Console.WindowWidth - text.Length ) / 2
+        sprintf "%*s%s%-*s" halfpad "" text halfpad ""
+
 
     let leftQuarPrint text = 
         let quarW = Console.WindowWidth / 4
@@ -291,7 +296,7 @@
     let printSRecord record = 
         match record with
         |EnvironmentVar r ->
-            sprintf "Key: %s" r.environmentKey |> cPrinter Blue
+            sprintf "Key: %s" r.environmentKey |> printfn "%s"
             sprintf "Value: %s" r.environmentVal |> printfn "%s\n"
         |Event4624 r ->
             printfn "Subject User: %s\%s" r.subjectDomainname r.subjectUsername
@@ -326,8 +331,8 @@
                 printfn "Applied to profiles: %s\n" f.profiles)
         |Network r -> ()
         |PC r ->
-            sprintf "Hostname: %s" r.hostname |> cPrinter Blue
-            sprintf "Processor Core count: %i" r.processorCount |> cPrinter Blue
+            sprintf "Hostname: %s" r.hostname |> printfn "%s"
+            sprintf "Processor Core count: %i" r.processorCount |> printfn "%s"
         |WindowsDetails r ->
             printfn "User: %s" r.currentSession.username
             printfn "Current Working Directory: %s" r.currentSession.cwd
@@ -791,10 +796,3 @@
     
     let getFirewallAttr (fObj : obj) (attrName: string) =
         fObj.GetType().InvokeMember(attrName, BindingFlags.GetProperty, null, fObj, null) |> string
-
-    
-    
-    
-        
-
-        

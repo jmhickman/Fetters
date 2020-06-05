@@ -178,8 +178,8 @@
             |None -> []
 
     
-    //Owner lookup is extremely expensive. Not hooked up for now
     let getProcessInformation () : WmiRecord list =
+        //This function is very time expensive, and has to be run on its own
         let filters = ["Name";"ProcessID";"ExecutablePath";"CommandLine"]
         let c = initializeManagementScope (localScope SProcess)
         let q = createObjectQuery SProcess
@@ -205,5 +205,4 @@
              pid = rl.[1]
              processBinpath = rl.[2]
              processInvocation = rl.[3]
-             processOwner = po} |> WmiRecord.Process
-             )
+             processOwner = po} |> WmiRecord.Process)

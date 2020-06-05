@@ -230,4 +230,3 @@
         "geteventlog4648"
         "querywmi-patches"
         ]
-
