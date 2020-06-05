@@ -1,7 +1,25 @@
-﻿module Fetters.Lists
+﻿//Licensed to the Apache Software Foundation (ASF) under one
+//or more contributor license agreements.  See the NOTICE file
+//distributed with this work for additional information
+//regarding copyright ownership.  The ASF licenses this file
+//to you under the Apache License, Version 2.0 (the
+//"License"); you may not use this file except in compliance
+//with the License.  You may obtain a copy of the License at
+
+//  http://www.apache.org/licenses/LICENSE-2.0
+
+//Unless required by applicable law or agreed to in writing,
+//software distributed under the License is distributed on an
+//"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+//KIND, either express or implied.  See the License for the
+//specific language governing permissions and limitations
+//under the License.
+
+module Fetters.Lists
 
     open System.Security.AccessControl
     //Opinionated decision to cull UNKNOWN processes from the parent list.
+    //Currently leaving un-implemented.
     let InterestingProcesses = 
         [("mcshield.exe","McAfeeAV","AV")
          ("windefend.exe","WindowsDefenderAV","AV")
@@ -92,11 +110,21 @@
         "UMFD-2"
         "UMFD-3"
         "UMFD-4"
+        "UMFD-5"
+        "UMFD-6"
+        "UMFD-7"
+        "UMFD-8"
+        "UMFD-9"
         "DWM-0"
         "DWM-1"
         "DWM-2"
         "DWM-3"
         "DWM-4"
+        "DWM-5"
+        "DWM-6"
+        "DWM-7"
+        "DWM-8"
+        "DWM-9"
         "ANONYMOUS LOGON"
         ]
 
