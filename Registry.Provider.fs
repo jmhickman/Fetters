@@ -7,7 +7,7 @@
 
 
     //// Local Administrator Password Solution Enum ////
-    let getLAPSSettings () : LapsSettings =
+    let getLAPSSettings () : FettersRegistryRecord =
         //Test to see if LAPS is present/configured, and if so, pull some data
         //Will return a None since we test if the key is even present first
         let rKey = extractRegistryKey <| getRegistryKeyHKLM "Software\\Policies\\Microsoft Services\\AdmPwd"
@@ -16,11 +16,11 @@
          lapsPasswordComplexity = getRegistryValue "PasswordComplexity" rKey
          lapsPasswordLength = getRegistryValue "PasswordLength" rKey
          lapsPasswdProtection = getRegistryValue "PwdExpirationProtectionEnabled" rKey
-        }
+        } |> FettersRegistryRecord.LapsSettings
         
 
     //// Windows Automatic Logon Enum ////
-    let getAutoLogonSettings () : AutoLogonSettings =
+    let getAutoLogonSettings () : FettersRegistryRecord =
         //Test to see if any autologon settings exist on the system.
         //Will return a Some even if the contents are None, since this key is
         //a default Windows key.
@@ -32,11 +32,11 @@
          altDefaultDomainName = getRegistryValue "AltDefaultDomainName" rKey
          altDefaultUserName = getRegistryValue "AltDefaultUserName" rKey
          altDefaultPassword = getRegistryValue "AltDefaultPassword" rKey
-         }
+         } |> FettersRegistryRecord.AutoLogonSettings
 
 
     //// AutoRun Enum ////
-    let getAutoRunValues () : AutorunSetting list = 
+    let getAutoRunValues () : FettersRegistryRecord list = 
         autorunLocations
         |> Array.map(fun s -> retrieveNamesByIntegrity HKEY_USER HKEY_CURRENT_USER s)
         |> Array.concat
@@ -45,10 +45,11 @@
             pArray |> Array.map(fun p -> {location = rKey.Name; value = getRegistryValue p rKey }))
         |> Array.concat
         |> Array.toList
+        |> List.map FettersRegistryRecord.AutorunSetting
  
 
     //// Sysmon Config Enum
-    let listSysmonconfig () : SysmonConfig =
+    let listSysmonconfig () : FettersRegistryRecord =
         //Test to see if any Sysmon config is present on the system.
         //Will return a None if the relevant key is absent
         let rKey = extractRegistryKey <| getRegistryKeyHKLM "SYSTEM\\CurrentControlSet\\Services\\SysmonDrv\\Parameters" 
@@ -56,7 +57,7 @@
         {hashingAlgorithm = getRegistryValue "HashingAlgorithm" rKey
          options = getRegistryValue "Options" rKey
          rules = getRegistryValue "Rules" rKey
-         }
+         } |> FettersRegistryRecord.SysmonConfig
         
 
     //// RDP Saved Connection Enum ////
@@ -69,7 +70,7 @@
         {host = p; usernameHint = getRegistryValue "UsernameHint" rKey}
             
 
-    let getRDPSavedConnections () : RDPSavedConnection list =
+    let getRDPSavedConnections () : FettersRegistryRecord list =
         //Retrieves RDP connection info from the registry.
         getRDPSavedConnectionsNames ()
         |> Array.map(fun tuple ->
@@ -78,6 +79,7 @@
             |> Array.map(fun p -> getRDPSavedConnection hive path p))
             |> Array.concat
             |> Array.toList
+            |> List.map FettersRegistryRecord.RDPSavedConnection
 
 
     //// MRU Commands Enum ////         
@@ -89,7 +91,7 @@
         {recentCommand = getRegistryValue p rKey}
   
  
-    let getRecentCommands () =
+    let getRecentCommands () : FettersRegistryRecord list =
         getRecentRuncommandsNames () 
         |> Array.map(fun tuple -> 
             let rKey, pArray = tuple
@@ -97,10 +99,12 @@
             |> Array.filter(fun f -> not(f = "MRUList")) 
             |> Array.map(fun p -> getRecentRuncommand rKey p ))
         |> Array.concat
+        |> Array.toList
+        |> List.map FettersRegistryRecord.RecentCommand
 
         
     //// UAC Policy Enum ////
-    let getUACSystemPolicies () : UACPolicies =
+    let getUACSystemPolicies () : FettersRegistryRecord =
         let uacKey = extractRegistryKey <| getRegistryKeyHKLM "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System"
         let consentPromptBehavior = getRegistryValue "ConsentPromptBehaviorAdmin" uacKey
         let enableLUA = getRegistryValue "EnableLUA" uacKey 
@@ -111,11 +115,11 @@
          enableLUA = enableLUA
          localAccountTokenFilterPolicy = localAccounttokenFilterPolicy
          filterAdministratorToken = filterAdministratorToken
-         }
+         } |> FettersRegistryRecord.UACPolicies
 
 
     //// PowerShell Environment Enum ////
-    let getPShellEnv () : PowerShellEnv =
+    let getPShellEnv () : FettersRegistryRecord =
         let rKey2 = extractRegistryKey <| getRegistryKeyHKLM "SOFTWARE\\Microsoft\\PowerShell\\1\\PowerShellEngine" 
         let pshellver2 = getRegistryValue "PowerShellVersion" rKey2
         let rKey5 = extractRegistryKey <| getRegistryKeyHKLM "SOFTWARE\\Microsoft\\PowerShell\\3\\PowerShellEngine" 
@@ -126,48 +130,51 @@
                 pArray
                 |> Array.map(fun p -> getRegistryValue p rKey))
                 |> Array.concat
+                |> Array.toList
         let pshellMLog = 
             collectLowIntegrityNames HKEY_LOCAL_MACHINE "SOFTWARE\\Policies\\Microsoft\\Windows\\PowerShell\\ModuleLogging"
             |> Array.map(fun (rKey, pArray) -> 
                 pArray
                 |> Array.map(fun p -> getRegistryValue p rKey))
                 |> Array.concat
+                |> Array.toList
         let pshellSLog = 
             collectLowIntegrityNames HKEY_LOCAL_MACHINE "SOFTWARE\\Policies\\Microsoft\\Windows\\PowerShell\\ScriptBlockLogging"
             |> Array.map(fun (rKey, pArray) -> 
                 pArray
                 |> Array.map(fun p -> getRegistryValue p rKey))
                 |> Array.concat
+                |> Array.toList
 
         {poshVersion2 = pshellver2
          poshVersion5 = pshellver5
          poshTLog = pshellTLog
          poshMLog = pshellMLog
          poshSLog = pshellSLog
-         }
+         } |> FettersRegistryRecord.PowerShellEnv
 
 
     //// System/User Proxy Settings Enum ////
-    let getSystemInternetSettings () : InternetSettings =
+    let getSystemInternetSettings () : FettersRegistryRecord =
         let rKey = extractRegistryKey <| getRegistryKeyHKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings"  
         
         {proxyServer = getRegistryValue "ProxyServer" rKey
          proxyOverride = getRegistryValue "ProxyOverride" rKey
          proxyEnable = getRegistryValue "ProxyEnable" rKey
-        }
+        } |> FettersRegistryRecord.InternetSettings
     
 
-    let getUserInternetSettings () : InternetSettings =
+    let getUserInternetSettings () : FettersRegistryRecord =
         let rKey = extractRegistryKey <| getRegistryKeyHKCU "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" 
             
         {proxyServer = getRegistryValue "ProxyServer" rKey
          proxyOverride = getRegistryValue "ProxyOverride" rKey
          proxyEnable = getRegistryValue "ProxyEnable" rKey
-        }
+        } |> FettersRegistryRecord.InternetSettings
 
 
     //// LSA Status Enum ////
-    let getLSASettings () : LSASettings  =
+    let getLSASettings () : FettersRegistryRecord  =
         let rKey = extractRegistryKey <| getRegistryKeyHKLM "SYSTEM\\CurrentControlSet\\Control\\Lsa" 
         let lsaResults = 
             lsaNames
@@ -185,20 +192,20 @@
          restrictAnon = lsaResults.[9]
          restrictSAM = lsaResults.[10]
          samConnAccnt = lsaResults.[11]
-         }
+         } |> FettersRegistryRecord.LSASettings
 
 
     //// Windows Audit Settings Enum ////
-    let getAuditSettings () : AuditSettings = 
+    let getAuditSettings () : FettersRegistryRecord = 
         //I couldn't find any sort of decent list of posible Audit values, so
         //I'm checking for just the one I found.
         let rKey = extractRegistryKey <| getRegistryKeyHKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\Audit"
             
-        {processauditing = getRegistryValue "ProcessCreationIncludeCmdLine_Enabled" rKey}
+        {processauditing = getRegistryValue "ProcessCreationIncludeCmdLine_Enabled" rKey} |> FettersRegistryRecord.AuditSettings
 
 
     //// Windows Event Forwarding Enum ////
-    let getWEFSettings () : WEFSettings = 
+    let getWEFSettings () : FettersRegistryRecord = 
         //Just bulk grabbing crap. Huge potential list of results.
         let names = 
             collectLowIntegrityNames HKEY_LOCAL_MACHINE "Software\\Policies\\Microsoft\\Windows\\EventLog\\EventForwarding\\SubscriptionManager"
@@ -209,7 +216,8 @@
                 pArray
                 |> Array.map(fun p -> getRegistryValue p rKey))
             |> Array.concat
-        {policies = results}
+            |> Array.toList
+        {policies = results} |> FettersRegistryRecord.WEFSettings
 
 
     //// PuTTY Session Enumeration ////
@@ -228,8 +236,11 @@
         {hostname = results.[0]; username = results.[1]; publicKeyFile = results.[2]; portForwardings = results.[3]; connectionSharing = results.[4]}
          
     
-    let getPuttySessions () = 
-        getPuttySessionKeys () |> Array.map getPuttySessionValue |> Array.toList
+    let getPuttySessions () : FettersRegistryRecord list = 
+        getPuttySessionKeys () 
+        |> Array.map getPuttySessionValue 
+        |> Array.toList 
+        |> List.map FettersRegistryRecord.PuttySSHSession
 
 
     //// PuTTY Hostkey Enum ////
@@ -247,8 +258,11 @@
         {recentHostKeys = result}
 
 
-    let getPuttyHostkeys () = 
-        getPuttyHostPublickeyNames () |> Array.map getPuttyHostPublickeyValue |> Array.toList
+    let getPuttyHostkeys () : FettersRegistryRecord list = 
+        getPuttyHostPublickeyNames () 
+        |> Array.map getPuttyHostPublickeyValue 
+        |> Array.toList
+        |> List.map FettersRegistryRecord.PuttyHostPublicKeys
 
 
     let private getInternetExplorerHistoryNames() : (RegistryKey * string [])[] =
@@ -261,10 +275,11 @@
         {path = rKey.Name; url = getRegistryValue name rKey}
 
 
-    let getInternetExplorerHistory () : HistoryIE list = 
+    let getInternetExplorerHistory () : FettersRegistryRecord list = 
         getInternetExplorerHistoryNames () 
         |> Array.map(fun tu ->  
             let rKey, p = tu 
             p |> Array.map (getInternetExplorerHistoryValues rKey))
         |> Array.concat
         |> Array.toList
+        |> List.map FettersRegistryRecord.HistoryIE

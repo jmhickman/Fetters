@@ -23,18 +23,12 @@ let initialSetup () =
 
     {sysRoot = s; luserFolders = l; localAdmin = lAdm; highIntegrity = hi; now = now; windowWeek = wWeek}
 
-let recordPrinter record =
-    match record with
-    |FettersFilesystemRecord r-> printFRecord r
-    |FettersPInvokeRecord r -> printPRecord r
-    |FettersRegistryRecord r -> printRRecord r
-    |FettersSpecialRecord r -> printSRecord r
-    |WmiRecord r -> printWRecord r
 
 let (|FunctionName|_|) (functionname: string) = 
     if functionNames |> List.contains (functionname.ToLower()) then Some (functionname.ToLower()) else None
 
-let rec createArgumentRecord args (initArgs:ProgramArguments ) : ProgramArguments =
+
+let rec createArgumentRecord args (initArgs:ProgramArguments) : ProgramArguments =
     match args with
     | [] -> initArgs
     | "getprocessinformation"::tail -> 
@@ -64,21 +58,25 @@ let rec createArgumentRecord args (initArgs:ProgramArguments ) : ProgramArgument
 
 
 let printTerseHelp () =
-    "FETTERS" |> centerPrint |> cPrinter Yellow
-    "release: beta 2" |> centerPrint |> cPrinter Yellow
+    "Fetters: Windows System Enumeration" |> centerPrint |> cPrinter Yellow
+    "A port of Seatbelt in F#" |> centerPrint |> cPrinter Yellow
+    "Release 2" |> centerPrint |> cPrinter Yellow
     printfn "\n\n"
-    "fetters [group]" |> leftTenthPrint |> cPrinter Yellow
+    "fetters [groupname]" |> leftTenthPrint |> cPrinter Yellow
     "fetters [<functionname1>..<functionnameN>]" |> leftTenthPrint |> cPrinter Yellow
     printfn "\n"
     "Options:" |> leftTenthPrint |> cPrinter Green
     "-hh              Shows verbose help for each enumeration function" |> cPrinter Blue
     "system           Runs enumerations targeting the system" |> cPrinter Blue
     "user             Runs enumerations targeting individual users" |> cPrinter Blue
-    "extra            Checks that are long running, require elevation or unreliable" |> cPrinter Blue
+    "extra            Long running/very verbose checks that require elevation" |> cPrinter Blue
     "all              Runs system and user checks together" |> cPrinter Blue
-    "<functionname>   List of individual checks, not case sensitive" |> cPrinter Blue
+    "<functionname>   Individual checks, not case sensitive. May be grouped" |> cPrinter Blue
+    "                 together in any number or order. Some can be very    " |> cPrinter Blue
+    "                 verbose!" |> cPrinter Blue
     printfn ""
-    "getprocessinformation   Long check that excludes others, dumps processes and owners" |> gPrinter Asterisk |> cPrinter Blue
+    "getprocessinformation   Excludes other checks, dumps processes and owners" |> gPrinter Asterisk |> cPrinter Blue
+    "                        SLOW!" |> gPrinter Asterisk |> cPrinter Blue
 
 
 let printFullHelp () =
@@ -144,117 +142,219 @@ let printFullHelp () =
     "'extra' checks" |> gPrinter Asterisk |> cPrinter Green 
     ("geteventlog4624", "ELEVATED Only 7 day Event 4624 information from Security Log") |> splitPrint
     ("geteventlog4624", "ELEVATED Only 7 day Event 4648 information from Security Log") |> splitPrint
-    ("gettokengroupsids", "Lists SIDs the current process claims. (Unreliable)") |> splitPrint
-    ("getprocessinformation", "Lists processes and their owners. Very Slow") |> splitPrint
     ("querywmi-patches", "Lists all installed Windows patches") |> splitPrint
 
 
-let matchFunctionAndRun (uFolders: string array) highBool now week (func: string)  =
+let matchFunctionAndRun (uFolders: string array) highBool now week (func: string) : unit  =
     match func with
-    |"getbasicinfo" -> 
+    |"getbasicinfo" ->
+        printfn ""
         "===== Basic PC Information =====" |> centerPrint |> cPrinter Yellow
         let w, p = getBasicInfo ()
         printSRecord p
         printSRecord w
     |"islocaladmin" -> isLocalAdmin () |> printfn "%A"
     |"ishighintegrity" -> isHighIntegrity () |> printfn "%A"
-    |"gettokengroupsids" -> getTokenGroupSIDs () |> printfn "%A"
-    |"gettokenprivinformation" -> getTokenPrivInformation () |> printfn "%A"
-    |"getuacsystempolicies" -> getUACSystemPolicies () |> printfn "%A"
-    |"getpshellenv" -> getPShellEnv () |> printfn "%A"
-    |"getauditsettings" -> getAuditSettings |> printfn "%A"
-    |"getwefsettings" -> getWEFSettings |> printfn "%A"
-    |"getlsasettings" -> getLSASettings () |> printfn "%A"
+    |"gettokengroupsids" -> getTokenGroupSIDs () |> printfn "%A" // special case
+    |"gettokenprivinformation" -> 
+        printfn ""
+        "===== Token Privileges =====" |> centerPrint |> cPrinter Yellow
+        getTokenPrivInformation () |> printPRecord
+    |"getuacsystempolicies" -> 
+        printfn ""
+        "===== UAC Policies =====" |> centerPrint |> cPrinter Yellow
+        getUACSystemPolicies () |> printRRecord
+    |"getpshellenv" -> 
+        printfn ""
+        "===== PowerShell Environment Information and Logging =====" |> centerPrint |> cPrinter Yellow
+        getPShellEnv () |> printRRecord
+    |"getauditsettings" -> 
+        printfn ""
+        "===== Windows Audit Settings (if set) =====" |> centerPrint |> cPrinter Yellow
+        getAuditSettings () |> printRRecord
+    |"getwefsettings" -> 
+        printfn ""
+        "===== Windows Event Forwarding Settings (if set) =====" |> centerPrint |> cPrinter Yellow
+        getWEFSettings () |> printRRecord
+    |"getlsasettings" -> 
+        printfn ""
+        "===== LSA Settings =====" |> centerPrint |> cPrinter Yellow
+        getLSASettings () |> printRRecord
     |"getsystemenvvariables" -> 
+        printfn ""
         "===== System Environment Variables =====" |> centerPrint |> cPrinter Yellow
         getSystemEnvVariables () |> List.iter printSRecord
     |"getuserenvvariables" -> 
+        printfn ""
         "===== User's Environment Variables ====" |> centerPrint |> cPrinter Yellow
         getUserEnvVariables () |> List.iter printSRecord
-    
-    |"getsysteminternetsettings" -> getSystemInternetSettings () |> printfn "%A"
-    |"getuserinternetsettings" -> getUserInternetSettings () |> printfn "%A"
-    |"getlapssettings" -> getLAPSSettings () |> printfn "%A"
-    |"getlocalgroupmembership" -> getLocalGroupMembership "Administrators" |> printfn "%A"
-    |"enumeraterdpsessions" -> enumerateRdpSessions () |> printfn "%A"
-    
-    |"getfirewallrules-deny" -> getFirewallRules true |> printSRecord
-    |"getfirewallrules-allow" -> getFirewallRules false |> printSRecord
-    |"getautologonsettings" -> getAutoLogonSettings () |> printfn "%A"
-    |"getautorunvalues" -> getAutoRunValues () |> printfn "%A"
-    |"getlocalarptables" -> getLocalArpTables () |> printfn "%A"
-    |"enumeratetcpconnections" -> enumerateTCPConnections () |> printfn "%A"
-    |"enumerateudpconnections" -> enumerateUDPConnections () |> printfn "%A"
-    |"listsysmonconfig" -> listSysmonconfig () |> printfn "%A"
+    |"getsysteminternetsettings" -> 
+        printfn ""
+        "===== System Proxy Settings =====" |> centerPrint |> cPrinter Yellow
+        getSystemInternetSettings () |> printRRecord
+    |"getuserinternetsettings" -> 
+        printfn ""
+        "===== User Proxy Settings =====" |> centerPrint |> cPrinter Yellow
+        getUserInternetSettings () |> printRRecord
+    |"getlapssettings" -> 
+        printfn ""
+        "===== LAPS Settings (if present) =====" |> centerPrint |> cPrinter Yellow
+        getLAPSSettings () |> printRRecord
+    |"getlocalgroupmembership" -> getLocalGroupMembership "Administrators" |> printfn "%A" //special
+    |"enumeraterdpsessions" -> 
+        printfn ""
+        "===== RDP Sessions =====" |> centerPrint |> cPrinter Yellow
+        enumerateRdpSessions () |> List.iter printPRecord
+    |"getfirewallrules-deny" -> 
+        printfn ""
+        "===== Firewall Rules DENY ONLY =====" |> centerPrint |> cPrinter Yellow
+        getFirewallRules true |> printSRecord
+    |"getfirewallrules-allow" -> 
+        printfn ""
+        "===== Firewall Rules ALLOW ONLY =====" |> centerPrint |> cPrinter Yellow
+        getFirewallRules false |> printSRecord
+    |"getautologonsettings" -> 
+        printfn ""
+        "===== Autologon Settings (if present) =====" |> centerPrint |> cPrinter Yellow
+        getAutoLogonSettings () |> printRRecord
+    |"getautorunvalues" -> 
+        printfn ""
+        "===== Autoruns =====" |> centerPrint |> cPrinter Yellow
+        getAutoRunValues () |> List.iter printRRecord
+    |"getlocalarptables" -> 
+        printfn ""
+        "===== ARP entries =====" |> centerPrint |> cPrinter Yellow
+        getLocalArpTables () |> List.iter printPRecord
+    |"enumeratetcpconnections" -> 
+        printfn ""
+        "===== TCP Connections =====" |> centerPrint |> cPrinter Yellow
+        enumerateTCPConnections () |> List.iter printPRecord
+    |"enumerateudpconnections" -> 
+        printfn ""
+        "===== UDP Listeners =====" |> centerPrint |> cPrinter Yellow
+        enumerateUDPConnections () |> List.iter printPRecord
+    |"listsysmonconfig" -> 
+        printfn ""
+        "===== Sysmon Config (if present) =====" |> centerPrint |> cPrinter Yellow
+        listSysmonconfig () |> printRRecord
     |"triagefirefox" -> 
+        printfn ""
         "===== Triage Firefox ====="|> centerPrint |> cPrinter Yellow
         uFolders |> Array.map triageFirefox |> Array.iter printFRecord
     |"triagechrome" -> 
+        printfn ""
         "===== Triage Chrome =====" |> centerPrint |> cPrinter Yellow
         uFolders |> Array.map triageChrome |> Array.iter printFRecord
     |"getdpapimasterkeys" -> 
+        printfn ""
         "===== DPAPI Master Keys =====" |> centerPrint |> cPrinter Yellow
         uFolders |> getDPAPIMasterKeys |> List.iter printFRecord
     |"getcredfiles" -> 
+        printfn ""
         "===== DPAPI Credential Files =====" |> centerPrint |> cPrinter Yellow
         uFolders |> getDPAPICredFiles |> List.iter printFRecord
     |"detectrdcmanfile" -> 
+        printfn ""
         "===== Remote Desktop Connection Manager Files =====" |> centerPrint |> cPrinter Yellow
         uFolders |> detectRDCManFile |> List.map (gPrinter Plus) |> List.iter (cPrinter Blue)
-    |"getgooglecloudcreds"  -> uFolders |> getGoogleCloudCreds  |> List.iter printFRecord
-    |"getgooglecloudcredsl" -> uFolders |> getGoogleCloudCredsL |> List.iter printFRecord
-    |"getgoogleaccesstokens" -> uFolders |> getGoogleAccessTokens |> List.iter printFRecord
-    |"getazuretokens" -> uFolders |> getAzureTokens |> List.iter printFRecord
-    |"getazureprofile" -> uFolders |> getAzureProfile |> List.iter printFRecord
-    |"getawscreds" -> uFolders |> getAWSCreds |> List.iter printFRecord
-    |"getrdpsavedconnections" -> getRDPSavedConnections () |> printfn "%A"
-    |"getrecentcommands" -> getRecentCommands () |> printfn "%A"
-    |"getputtysessions" -> getPuttySessions () |> printfn "%A"
-    |"getputtyhostkeys" -> getPuttyHostkeys () |> printfn "%A"
-    |"getinternetexplorerhistory" -> getInternetExplorerHistory () |> printfn "%A"
-    |"enumerateuservaults" -> enumerateUserVaults () |> printfn "%A"
-    |"enumeratedomainsessions" -> enumerateDomainSessions () |> printfn "%A"
+    |"getgooglecloudcreds"  -> 
+        printfn ""
+        "===== Google Cloud Creds (if any) =====" |> centerPrint |> cPrinter Yellow
+        uFolders |> getGoogleCloudCreds  |> List.iter printFRecord
+    |"getgooglecloudcredsl" -> 
+        printfn ""
+        "===== Google Cloud Creds Legacy Location (if any) ====="|> centerPrint |> cPrinter Yellow
+        uFolders |> getGoogleCloudCredsL |> List.iter printFRecord
+    |"getgoogleaccesstokens" -> 
+        printfn ""
+        "===== Google Access Tokens (if any) ====="|> centerPrint |> cPrinter Yellow
+        uFolders |> getGoogleAccessTokens |> List.iter printFRecord
+    |"getazuretokens" -> 
+        printfn ""
+        "===== Azure Tokens (if any) ====="|> centerPrint |> cPrinter Yellow
+        uFolders |> getAzureTokens |> List.iter printFRecord
+    |"getazureprofile" -> 
+        printfn ""
+        "===== Azure Profiles (if any) ====="|> centerPrint |> cPrinter Yellow
+        uFolders |> getAzureProfile |> List.iter printFRecord
+    |"getawscreds" ->
+        printfn ""
+        "===== AWS credentials (if any) ====="|> centerPrint |> cPrinter Yellow
+        uFolders |> getAWSCreds |> List.iter printFRecord
+    |"getrdpsavedconnections" -> 
+        printfn ""
+        "===== RDP Saved Connection info =====" |> centerPrint |> cPrinter Yellow
+        getRDPSavedConnections () |> List.iter printRRecord 
+    |"getrecentcommands" -> 
+        printfn ""
+        "===== Recent Commands =====" |> centerPrint |> cPrinter Yellow
+        getRecentCommands () |> List.iter printRRecord
+    |"getputtysessions" -> 
+        printfn ""
+        "===== PuTTY Session info =====" |> centerPrint |> cPrinter Yellow
+        getPuttySessions () |> List.iter printRRecord
+    |"getputtyhostkeys" -> 
+        printfn ""
+        "===== PuTTY Host Public Keys =====" |> centerPrint |> cPrinter Yellow
+        getPuttyHostkeys () |>  List.iter printRRecord
+    |"getinternetexplorerhistory" -> 
+        printfn ""
+        "===== IE History (Reg) =====" |> centerPrint |> cPrinter Yellow
+        getInternetExplorerHistory () |> List.iter printRRecord
+    |"enumerateuservaults" -> 
+        printfn ""
+        "===== Windows Vault Contents =====" |> centerPrint |> cPrinter Yellow
+        enumerateUserVaults () |> List.iter printPRecord
+    |"enumeratedomainsessions" -> enumerateDomainSessions () |> List.iter printPRecord 
     |"geteventlog4624" -> 
+        printfn ""
         "===== Event Log 4624  =====" |> centerPrint |> cPrinter Yellow
         match highBool with
         |true -> getEventLog4624 week now |> List.iter printSRecord
         |false -> "Lack privileges to access Security log!" |> gPrinter Bang |> cPrinter Red
     |"geteventlog4648" -> 
+        printfn ""
         "===== Event Log 4648 =====" |> centerPrint |> cPrinter Yellow
         match highBool with
         |true -> getEventLog4648 week now |> List.iter printSRecord
-        |false -> "Lack privileges to access Security log!" |> gPrinter Bang |> cPrinter Red
+        |false -> "Lack privileges to access Security log!"  |> gPrinter Bang |> cPrinter Red
     |"querywmi-av" -> 
+        printfn ""
         "===== Anti-virus Enumeration (WMI) =====" |> centerPrint |> cPrinter Yellow
         queryWMI SAV |> List.iter printWRecord
     |"querywmi-disk" -> 
+        printfn ""
         "===== Windows Disks (WMI) =====" |> centerPrint |> cPrinter Yellow
         queryWMI SDisk |> List.iter printWRecord
     |"querywmi-group" -> 
+        printfn ""
         "===== Local Groups =====" |> centerPrint |> cPrinter Yellow
         queryWMI SGroup |> List.iter printWRecord
     |"querywmi-mappeddrive" -> 
+        printfn ""
         "===== Mapped Drives =====" |> centerPrint |> cPrinter Yellow
         queryWMI SMappedDrive |> List.iter printWRecord
     |"querywmi-networkshare" -> 
+        printfn ""
         "===== Network Shares =====" |> centerPrint |> cPrinter Yellow
         queryWMI SNetworkShare |> List.iter printWRecord
     |"querywmi-user" -> 
+        printfn ""
         "===== Current User Enumeration (WMI) =====" |> centerPrint |> cPrinter Yellow
         queryWMI SUser |> List.iter printWRecord
     |"querywmi-process" -> 
+        printfn ""
         "===== Windows Processes (WMI) =====" |> centerPrint |> cPrinter Yellow
         queryWMI SProcess |> List.iter printWRecord
     |"querywmi-service" -> 
+        printfn ""
         "===== Installed Services (WMI) =====" |> centerPrint |> cPrinter Yellow
         queryWMI SService |> List.iter printWRecord
     |"querywmi-patches" -> 
+        printfn ""
         "===== Installed Patches (WMI) =====" |> centerPrint |> cPrinter Yellow
         queryWMI SPatches |> List.iter printWRecord
     |_ -> printf ""
-
-
-
 
 
 [<EntryPoint>]
@@ -265,7 +365,7 @@ let main sysargs =
     let initArgs = {terseHelp = true; fullHelp = false; functionGroup = []}
     let args = sysargs |> Array.toList
     let actualArgs = createArgumentRecord args initArgs
-    //if actualArgs.terseHelp = true then printTerseHelp () else ()
+    
     match actualArgs.terseHelp with
     |true -> 
         printTerseHelp ()
@@ -283,10 +383,10 @@ let main sysargs =
         getProcessInformation () |> List.iter printWRecord
         System.Environment.Exit 0
     |false -> ()
-    
-    
+
     actualArgs.functionGroup
-    |> List.iter (matchFunctionAndRun init.luserFolders init.highIntegrity init.now init.windowWeek)
+    |> List.rev
+    |> List.iter(matchFunctionAndRun init.luserFolders init.highIntegrity init.now init.windowWeek)
     
     w |> stopWatch
     sprintf "Elapsed Time: %i" <| w.ElapsedMilliseconds |> gPrinter Bang |> cPrinter Red

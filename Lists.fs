@@ -114,94 +114,94 @@
         ]
 
     let functionNames = [
-        "getlocaluserfolders" //
-        "getbasicinfo" //
-        "islocaladmin" //
-        "ishighintegrity" //
-        "triagechrome" //
-        "triagefirefox" //
-        "getfirewallrules-deny"//
-        "getfirewallrules-allow"//
-        "geteventlog4624" //
-        "geteventlog4648" //
-        "getdpapimasterkeys" //
-        "getcredfiles" //
-        "detectrdcmanfile" //
-        "getgooglecloudcreds" //
-        "getgooglecloudcredsl" //
-        "getgoogleaccesstokens" //
-        "getazuretokens" //
-        "getazureprofile" //
-        "getawscreds" //
-        "getlapssettings" //
-        "getautologonsettings" //
-        "getautorunvalues" //
-        "listsysmonconfig" //
-        "getrdpsavedconnections" //
-        "getrecentcommands" //
-        "getuacsystempolicies" //
-        "getphsellenv" //
-        "getsystemenvvariables" //
-        "getuserenvvariables" //
-        "getsysteminternetsettings" //
-        "getuserinternetsettings" //
-        "getlsasettings" //
-        "geauditsettings" //
-        "getwefsettings" //
-        "getputtysessions" //
-        "getputtyhostkeys" //
-        "getinternetexplorerhistory" //
-        "querywmi-av" //
-        "querywmi-service" //
-        "querywmi-mappeddrive" //
-        "querywmi-networkshare" //
-        "querywmi-process" //
-        "querywmi-disk" //
-        "querywmi-group" //
-        "querywmi-patches" //
-        "querywmi-user" //
+        "getlocaluserfolders" 
+        "getbasicinfo" 
+        "islocaladmin" 
+        "ishighintegrity" 
+        "triagechrome" 
+        "triagefirefox" 
+        "getfirewallrules-deny"
+        "getfirewallrules-allow"
+        "geteventlog4624" 
+        "geteventlog4648" 
+        "getdpapimasterkeys" 
+        "getcredfiles" 
+        "detectrdcmanfile" 
+        "getgooglecloudcreds" 
+        "getgooglecloudcredsl" 
+        "getgoogleaccesstokens" 
+        "getazuretokens" 
+        "getazureprofile" 
+        "getawscreds" 
+        "getlapssettings" 
+        "getautologonsettings" 
+        "getautorunvalues" 
+        "listsysmonconfig" 
+        "getrdpsavedconnections" 
+        "getrecentcommands" 
+        "getuacsystempolicies" 
+        "getpshellenv" 
+        "getsystemenvvariables" 
+        "getuserenvvariables" 
+        "getsysteminternetsettings" 
+        "getuserinternetsettings" 
+        "getlsasettings" 
+        "getauditsettings" 
+        "getwefsettings" 
+        "getputtysessions" 
+        "getputtyhostkeys" 
+        "getinternetexplorerhistory" 
+        "querywmi-av" 
+        "querywmi-service" 
+        "querywmi-mappeddrive" 
+        "querywmi-networkshare" 
+        "querywmi-process" 
+        "querywmi-disk" 
+        "querywmi-group" 
+        "querywmi-patches" 
+        "querywmi-user" 
         "getprocessinformation"
-        "gettokengroupsids" //
-        "gettokenprivinformation" //
-        "getlocalarptables" //
-        "enumerateudpconnections" //
-        "enumeratetcpconnections" //
-        "enumerateuservaults" //
-        "enumeratedomainsessions" //
-        "getlocalgroupmembership" //
-        "enumeraterdpsessions" //
+        "gettokengroupsids" 
+        "gettokenprivinformation" 
+        "getlocalarptables" 
+        "enumerateudpconnections" 
+        "enumeratetcpconnections" 
+        "enumerateuservaults" 
+        "enumeratedomainsessions" 
+        "getlocalgroupmembership" 
+        "enumeraterdpsessions" 
         ]
 
     let systemGroup = [
-        "getbasicinfo"
-        "querywmi-mappeddrive"
-        "querywmi-networkshare"
-        "querywmi-av"
-        "querywmi-process"
-        "querywmi-service"
-        "querywmi-disk"
-        "querywmi-group"
-        "querywmi-user"
-        "gettokenprivinformation"
-        "getlocalgroupmembership"
-        "getlocalarptables"
-        "enumeratetcpconnections"
-        "enumerateudpconnections"
-        "getfirewallrules-deny"
-        "getuacsystempolicies"
-        "getpshellenv"
-        "getauditsettings"
-        "getwefsettings"
-        "getlsasettings"
-        "getsystemenvvariables"
-        "getuserenvvariables"
-        "getsysteminternetsettings"
-        "getuserinternetsettings"
-        "getlapssettings"
-        "enumeraterdpsessions"
-        "getautologonsettings"
-        "getautorunvalues"
         "listsysmonconfig"
+        "getautorunvalues"
+        "getautologonsettings"
+        "enumeraterdpsessions"
+        "getlapssettings"
+        "getuserinternetsettings"
+        "getsysteminternetsettings"
+        "getuserenvvariables"
+        "getsystemenvvariables"
+        "getlsasettings"
+        "getwefsettings"
+        "getauditsettings"
+        "getpshellenv"
+        "getuacsystempolicies"
+        "getfirewallrules-deny"
+        "enumerateudpconnections"
+        "enumeratetcpconnections"
+        "enumeratetcpconnections"
+        "getlocalarptables"
+        "gettokenprivinformation"
+        "querywmi-user"
+        "querywmi-service"
+        "querywmi-process"
+        "querywmi-networkshare"
+        "querywmi-mappeddrive"
+        "querywmi-group"
+        "querywmi-disk"
+        "querywmi-av"
+        "getbasicinfo"
         ]
 
     let userGroup = [
@@ -229,6 +229,5 @@
         "geteventlog4624"
         "geteventlog4648"
         "querywmi-patches"
-        "gettokengroupsids"
         ]
 

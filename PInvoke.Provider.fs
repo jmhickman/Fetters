@@ -846,10 +846,17 @@
     /////////////////////////
 
     //For extracting LSA_STRING_OUT 
+    let marshalLSAStringS (sourceStruct: LSA_STRING_OUT) : string =
+        match sourceStruct with
+        | x when not(x.buffer = IntPtr.Zero) && not(x.length = 0us) -> 
+            let unmanagedString = Marshal.PtrToStringAuto(sourceStruct.buffer, (int(sourceStruct.maxLength /2us) - 1))
+            unmanagedString
+        |_ -> ""
+
     let marshalLSAString (sourceStruct: LSA_STRING_OUT) : string =
         match sourceStruct with
         | x when not(x.buffer = IntPtr.Zero) && not(x.length = 0us) -> 
-            let unmanagedString = Marshal.PtrToStringAuto(sourceStruct.buffer, (int(sourceStruct.maxLength /2us))).Trim()
+            let unmanagedString = Marshal.PtrToStringAuto(sourceStruct.buffer, (int(sourceStruct.maxLength /2us) ))
             unmanagedString
         |_ -> ""
 
@@ -909,8 +916,8 @@
         | false -> System.Net.IPAddress.None
 
 
-    let enumerateRdpSessions () : RdpSession list option =
-        // Returns a RdpSession record list option of local sessions meeting the filter,
+    let enumerateRdpSessions () : FettersPInvokeRecord list =
+        // Returns a RdpSession record list of local sessions meeting the filter,
         // namely that they contain the name "RDP" in the session. We don't want
         // non-Rdp sessions in this output.
         let server = WTSOpenServer("localhost")
@@ -926,23 +933,20 @@
             | x when x > 0 -> populateRdpSessionStructs ppSessionInfo count
             | _ -> [||]
 
-        let enumList = 
-            allEnumeratedSessions 
-            |> Array.filter(fun f -> f.pSessionName.StartsWith("RDP"))
-            |> Array.map(fun sess -> 
-                {state = sess.State.ToString(); 
-                sessionID = sess.SessionID;
-                sessionName = sess.pSessionName;
-                hostName = sess.pHostName;
-                username = sess.pUserName;
-                remoteAddress = (rdpSessionReverseLookup sess.SessionID)
-                })
-            |> Array.toList
-
-        match enumList with
-        | x when x.Length > 0 -> Some enumList
-        | _ -> None
-
+        allEnumeratedSessions 
+        |> Array.filter(fun f -> f.pSessionName.StartsWith("RDP"))
+        |> Array.map(fun sess -> 
+            {state = sess.State.ToString(); 
+            sessionID = sess.SessionID;
+            sessionName = sess.pSessionName;
+            hostName = sess.pHostName;
+            username = sess.pUserName;
+            remoteAddress = (rdpSessionReverseLookup sess.SessionID)
+            })
+        |> Array.toList
+        |> List.map FettersPInvokeRecord.RdpSession
+        
+        
     /////////////////////////
     //Local Group Enumeration
     /////////////////////////
@@ -960,7 +964,7 @@
             mstruct)
         
 
-    let getLocalGroupMembership groupName : string list option =
+    let getLocalGroupMembership groupName : string list =
         //Enumerates the members of a local group. Will emit a None on empty 
         //groups or if there was a non-0 return code.
         let mutable bufPtr = IntPtr.Zero
@@ -979,15 +983,11 @@
         
         NetApiBufferFree(bufPtr) |> ignore
         
-        let groupMemberList = 
-            members
-            |> Array.filter(fun gmember -> not (gmember.lgrmi2_sid = IntPtr.Zero))
-            |> Array.map(fun gmember -> gmember.lgrmi2_domainandname.Trim()) 
-            |> Array.toList 
-        //None means there was an error in the NLGGM call, or the group doesn't exist. 
-        match groupMemberList with
-        | x when groupMemberList.Length > 0 -> Some groupMemberList
-        | _ -> None
+        members
+        |> Array.filter(fun gmember -> not (gmember.lgrmi2_sid = IntPtr.Zero))
+        |> Array.map(fun gmember -> gmember.lgrmi2_domainandname.Trim()) 
+        |> Array.toList 
+            
 
     ///////////////
     //Impersonation
@@ -1009,9 +1009,8 @@
                    DuplicateToken(procHandle, 2, &dupToken) &&
                    ImpersonateLoggedOnUser(dupToken)) 
                    with
-            |true -> sprintf "Impersonating %s" <| WindowsIdentity.GetCurrent().Name
-            |false -> sprintf "Failed to impersonate SYSTEM, error: %i" 
-                      <| Marshal.GetLastWin32Error()
+            |true -> sprintf "Impersonating %s" <| WindowsIdentity.GetCurrent().Name |> gPrinter Plus |> cPrinter Green
+            |false -> sprintf "Failed to impersonate SYSTEM, error: %i" <| Marshal.GetLastWin32Error() |> gPrinter Bang |> cPrinter Red
 
         CloseHandle(dupToken) |> ignore
         CloseHandle(procHandle) |> ignore
@@ -1020,15 +1019,18 @@
 
     let private revertToSelf () = 
         match RevertToSelf() with
-        |true -> true
-        |false -> false
-
+        |true -> 
+            "Completed task, reverting to current user" |> gPrinter Plus |> cPrinter Green
+            true
+        |false -> 
+            "Revert failed" |> gPrinter Bang |> cPrinter Red
+            false
 
     let private getSystem () = 
         //Impersonate the NTAUTHORITY\SYSTEM user for the purposes of high integrity actions.
         match isHighIntegrity () with
         | true -> impersonateSystem ()
-        | false -> sprintf "Current role cannot escalate privileges"
+        | false -> sprintf "Current role cannot escalate privileges" |> gPrinter Minus |> cPrinter Red
         
     ////////////////////////////
     //LSA Methods (for Kerberos)
@@ -1239,16 +1241,16 @@
              |true -> SecurityIdentifier(sess.pSID)
              |false -> SecurityIdentifier("S-1-1-0")
                      
-        {username = marshalLSAString sess.username
-         domain = marshalLSAString sess.loginDomain
+        {username = marshalLSAStringS sess.username
+         domain = marshalLSAStringS sess.loginDomain
          logonID = sess.loginID.lower
          userSID = SID
-         authenticationPkg = marshalLSAString sess.authenticationPackage
+         authenticationPkg = marshalLSAStringS sess.authenticationPackage
          logonType = sess.logonType.ToString()
          loginTime = DateTime.FromFileTime(int64(sess.loginTime))
-         logonServer = marshalLSAString sess.logonServer
-         logonServerDnsDomain = marshalLSAString sess.dnsDomainName
-         userPrincipalName = marshalLSAString sess.upn
+         logonServer = marshalLSAStringS sess.logonServer
+         logonServerDnsDomain = marshalLSAStringS sess.dnsDomainName
+         userPrincipalName = marshalLSAStringS sess.upn
          kerberosCachedTickets = kQRecords
          kerberosTGTcontents = kRRecords
         }
@@ -1264,7 +1266,7 @@
             |KERB_TKT_CACHE_INFO tkt -> 
                 createKerberosQueryTicket tkt |> KerberosQueryTicket)
 
-    let enumerateDomainSessions () : DomainSession list =
+    let enumerateDomainSessions () : FettersPInvokeRecord list =
         // Emits a DomainSession for each enumerated session, containing KerberosTickets as well
         // as other metadata.
         let LSAStringQuery = 
@@ -1277,13 +1279,14 @@
         //system,I have to inject fake values for later processing to work.
         let tTuple = 
             match isHighIntegrity () with
-            |true -> printfn "%s" <| getSystem()
+            |true -> getSystem()
                      let lsaHandle = registerLsaLogonProcess ()
                      let lsaAuthPackage = lookupLsaAuthenticationPackage lsaHandle LSAStringQuery
                      let sessionList = fetchLsaSessions ()
                      let luidList = 
                          sessionList
                          |> List.map(fun session -> session.loginID.lower, session.loginID.upper)
+                     revertToSelf () |> ignore
                      sessionList, luidList, lsaAuthPackage, lsaHandle
             |false -> let lsaHandle = untrustedLsaConnection ()
                       let lsaAuthPackage = lookupLsaAuthenticationPackage lsaHandle LSAStringQuery
@@ -1328,11 +1331,12 @@
                     let kRRecords = createKerberosRecordList kExtStruct
                     (sess,kQRecords,kRRecords))
             |>List.map createDomainSessionRecord
+            |> List.map FettersPInvokeRecord.DomainSession
 
         //Cleanup and then pass out result
         deregisterLsaLogonProcess lsaHandle
         closeLsaHandle lsaHandle
-        domainSessionRecord
+        domainSessionRecord 
 
     //////////////////
     //Credential Vault
@@ -1449,11 +1453,13 @@
                  })
 
 
-    let enumerateUserVaults () =
+    let enumerateUserVaults () : FettersPInvokeRecord list =
         enumerateVaults ()
         |> openVault 
         |> List.map(fun v -> enumerateVaultItems v)
         |> List.map(fun v -> createVaultRecord v)
+        |> List.concat
+        |> List.map FettersPInvokeRecord.VaultRecord
 
 
     ////////////////////////////
@@ -1529,10 +1535,10 @@
          }
         
 
-    let enumerateTCPConnections () =
+    let enumerateTCPConnections () : FettersPInvokeRecord list =
         getTcpTable () 
         |> getTcpTableRows 
-        |> List.map(fun x -> createTCPRecord x)
+        |> List.map(fun x -> createTCPRecord x |> FettersPInvokeRecord.TCPConnection)
 
     ///////////////////////////
     //UDP conection enumeration
@@ -1592,16 +1598,16 @@
          }
  
 
-    let enumerateUDPConnections () : UDPListener list =
+    let enumerateUDPConnections () : FettersPInvokeRecord list =
         getUdpTable () 
         |> getUdpTableRows 
-        |> List.map(fun x -> createUdpRecord x)
+        |> List.map(fun x -> createUdpRecord x |> FettersPInvokeRecord.UDPListener)
 
     ///////////////////////
     //Arp Table Enumeration
     ///////////////////////
 
-    let getLocalArpTables () : ArpTableByInd list =
+    let getLocalArpTables () : FettersPInvokeRecord list =
         let mutable tableSize = 0
         let mutable tablePtr = IntPtr.Zero
         let mutable tRowPtr = IntPtr.Zero
@@ -1623,7 +1629,7 @@
                 let addr = IPAddress(BitConverter.GetBytes(row.dwAddr))
                 let hwaddr = BitConverter.ToString([|row.mac0;row.mac1;row.mac2;row.mac3;row.mac4;row.mac5|]) 
                 let arpTableByIndex = {indexaddresses = (row.dwIndex,(addr, hwaddr))}
-                arpTableByIndex)
+                arpTableByIndex |> FettersPInvokeRecord.ArpTableByInd)
 
         FreeMibTable(tablePtr) |> ignore
         arpTableByIndexResult
@@ -1632,7 +1638,7 @@
     //Token Privilege Enumeration
     /////////////////////////////
 
-    let getTokenPrivInformation () : TokenPrivileges =
+    let getTokenPrivInformation () : FettersPInvokeRecord =
         let mutable tokenInfoLength = 0
         let mutable tokenInfo = IntPtr.Zero
         let currToken = WindowsIdentity.GetCurrent().Token
@@ -1675,7 +1681,7 @@
         //Pack and ship
         CloseHandle privPtr |> ignore
         CloseHandle tokenInfo |> ignore
-        {privileges = privList}
+        {privileges = privList} |> FettersPInvokeRecord.TokenPrivileges
         
     
     /////////////////////////

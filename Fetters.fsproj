@@ -22,7 +22,7 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <PlatformTarget>x64</PlatformTarget>
+    <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -41,8 +41,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Costura.Fody" Version="4.1.0" />
     <PackageReference Include="FSharp.Data" Version="3.3.3" />
-    <PackageReference Include="ilmerge" Version="3.0.29" />
     <PackageReference Include="Microsoft.Win32.Registry" Version="4.7.0" />
     <PackageReference Include="System.Management" Version="4.7.0" />
   </ItemGroup>

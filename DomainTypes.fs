@@ -46,9 +46,10 @@ module Fetters.DomainTypes
            indexaddresses : (int32 * (IPAddress * string))
            }
 
-    type ArpTable = {
-        addresses : (IPAddress * string) list
-        }
+    //type ArpTable = {
+    //    localaddress : IPAddress
+    //    addresses : (IPAddress * string) list
+    //    }
 
     [<Flags>]
     type KERB_TICKET_FLAGS =
@@ -157,7 +158,7 @@ module Fetters.DomainTypes
         }
 
     type FettersPInvokeRecord = 
-        |ArpTable of ArpTable
+        |ArpTableByInd of ArpTableByInd
         |DomainSession of DomainSession
         |RdpSession of RdpSession
         |TCPConnection of TCPConnection
@@ -235,9 +236,9 @@ module Fetters.DomainTypes
     type PowerShellEnv = {
         poshVersion2 : RegistryResult option 
         poshVersion5 : RegistryResult option 
-        poshTLog : RegistryResult option []
-        poshMLog : RegistryResult option []
-        poshSLog : RegistryResult option []
+        poshTLog : RegistryResult option list
+        poshMLog : RegistryResult option list
+        poshSLog : RegistryResult option list
         }
 
     type RDPSavedConnection = {
@@ -265,7 +266,7 @@ module Fetters.DomainTypes
 
     type WEFSettings = {
           //Potentially huge keyspace makes anything more specific untenable
-          policies : RegistryResult option []
+          policies : RegistryResult option list
           }
 
     type FettersRegistryRecord =
@@ -422,7 +423,7 @@ module Fetters.DomainTypes
         gatewayAddr : IPAddress
         dnsServers : IPAddress list
         dhcpServers : IPAddress list
-        arpTable : ArpTable
+        //arpTable : ArpTable Later
         }
 
     type Network = {
@@ -479,7 +480,7 @@ module Fetters.DomainTypes
     type LocalGroup = {
         name : string
         sid : string
-        members : string list option
+        members : string list
         }
     
     type MappedDrive = {

@@ -89,6 +89,33 @@
         printfn "%s%*s%s" text1 spacer "" text2
 
     
+    let printKerbTickets tickets =
+        tickets
+        |> List.iter(fun ticket ->
+            match ticket with
+            |KerberosQueryTicket t -> 
+                printfn "\n=== Ticket ==="
+                printfn "Kerberos Realm: %s" t.realm
+                printfn "Server: %s" t.serverName
+                printfn "Lifespan: %A - %A" t.startTime t.endTime
+                printfn "Renewal: %A" t.renewTime
+                printfn "Encryption type: %s" t.encryptionType
+                printfn "Ticket flags %A" t.ticketFlags
+            |KerberosRetrieveTicket t ->
+                printfn "\n=== TGT ==="
+                printfn "Service: %s/%s.%s" t.serviceName t.client t.domain
+                printfn "Target Domain: %s" t.targetDomain
+                printfn "alternate domain: %s" t.altTargetDomain
+                printfn "Sessionkey type: %s" t.sessionKeyType
+                printfn "Key: %s" t.base64SessionKey
+                printfn "Key Expiry: %A" t.keyExpiry
+                printfn "Lifespan: %A - %A" t.startTime t.endTime
+                printfn "Renewal: %A" t.renewTime
+                printfn "Blobsz: %i" t.encodedSize
+                printfn "Ticket: %s" t.base64EncodedTicket)
+            
+    
+    
     let regValuePrint regV =
         match regV with
         |String s -> sprintf "%s" s
@@ -104,20 +131,20 @@
         match record with
         |AWSCredential r ->
             sprintf "Original Path: %s" r.path |> cPrinter Blue
-            printfn "Base64 File: %s"r.encodedFile
+            printfn "Base64 File: %s\n"r.encodedFile
         |GoogleCredential r ->
             sprintf "Original Path: %s" r.path |> cPrinter Blue
-            printfn "Base64 File: %s" r.encodedFile
+            printfn "Base64 File: %s\n" r.encodedFile
         |AzureCredential r -> 
             sprintf "Original Path: %s" r.path |> cPrinter Blue
-            printfn "Base64 File: %s" r.encodedFile
+            printfn "Base64 File: %s\n" r.encodedFile
         |DPAPIMasterKey r -> 
             sprintf "Original SID: %s" r.userSID |> cPrinter Blue
-            printfn "Base64 File: %s" r.encodedBlob
+            printfn "Base64 File: %s\n" r.encodedBlob
         |DPAPICredFile r ->
             sprintf "Original Path: %s" r.path |> cPrinter Blue
             printfn "Description: %s" r.description
-            printfn "Base64 File: %s" r.encodedBlob
+            printfn "Base64 File: %s\n" r.encodedBlob
             
 
     let printFRecord record =
@@ -135,32 +162,130 @@
 
     let printPRecord record = 
         match record with
-        |ArpTable r -> ()
-        |DomainSession r -> ()
-        |RdpSession r -> ()
-        |TCPConnection r -> ()
-        |UDPListener r -> ()
-        |TokenPrivileges r -> ()
-        |VaultRecord r -> ()
+        |ArpTableByInd r ->
+            let idx, remote = r.indexaddresses
+            //sprintf "Index of interface: %i"  idx |> gPrinter Asterisk |> cPrinter Blue
+            printfn "ARP entry %A::%s" (fst remote) (snd remote)
+        |DomainSession r ->
+            "=== Session Information ===" |> centerPrint |> cPrinter Blue
+            if r.kerberosTGTcontents.Length > 0 then "=== TGT CONTENTS CAPTURED ===" |> gPrinter Plus |> cPrinter Green else ()
+            printfn "Session User: %s\%s" r.domain r.username
+            printfn "SID: %A" r.userSID
+            printfn "UPN: %s" r.userPrincipalName
+            printfn "Logon Server: %s\%s" r.logonServerDnsDomain r.logonServer
+            printfn "Logon type: %s" r.logonType
+            printfn "Logon time: %A" r.loginTime
+            printfn "LogonID: %i\n" r.logonID
+            printKerbTickets r.kerberosCachedTickets
+            printKerbTickets r.kerberosTGTcontents
+        |RdpSession r ->
+            printfn "Remote Host: %s" r.hostName
+            printfn "Remote IP: %A" r.remoteAddress
+            printfn "Username: %s" r.username
+            printfn "Session ID: %i" r.sessionID
+            printfn "Session name: %s:%s\n" r.sessionName r.state
+        |TCPConnection r ->
+            sprintf "%s" r.connectionState |> gPrinter Plus |> cPrinter Blue
+            r.service |> Option.defaultValue("Unknown_service") |> printf "%s@"
+            sprintf "%A:%i <--> %A:%i  PID: %i" r.localAddress r.localport r.remoteAddress r.remoteport r.pid|> printfn "%s\n"
+        |UDPListener r -> 
+            r.service |> Option.defaultValue("Unknown_service") |> printf "%s@"
+            sprintf "%A:%i" r.localAddress r.localport |> printfn "%s"
+            printfn "PID %i\n" r.pid
+        |TokenPrivileges r ->
+            r.privileges |> List.iter (printfn "%s")
+            printfn ""
+        |VaultRecord r ->
+            printfn "Name: %s" r.name
+            printfn "Last modified: %A" r.lastModified
+            r.resource |> Option.defaultValue("No resouce") |> printfn "%s"
+            r.identity |> Option.defaultValue("No identity") |> printfn "%s"
+            r.credential |> Option.defaultValue("No credential") |> printfn "%s"
+            r.packageSid |> Option.defaultValue("No SID\n") |> printfn "%s"
 
+
+    let unwrapRegistryResult (result: RegistryResult option) =
+        result |> Option.map(fun o -> (sprintf "%s" o.name), regValuePrint o.value)
 
     let printRRecord record = 
         match record with
-        |AuditSettings r -> ()
-        |AutoLogonSettings r -> ()
-        |AutorunSetting r -> ()
-        |HistoryIE r -> ()
-        |InternetSettings r -> ()
-        |LapsSettings r -> ()
-        |LSASettings r -> ()
-        |PuttyHostPublicKeys r -> ()
-        |PuttySSHSession r -> ()
-        |PowerShellEnv r -> ()
-        |RDPSavedConnection r -> ()
-        |RecentCommand r -> ()
-        |SysmonConfig r -> ()
-        |UACPolicies r -> ()
-        |WEFSettings r -> ()
+        |AuditSettings r ->
+            unwrapRegistryResult r.processauditing |> Option.iter(fun p -> printfn "%s\n%s" (fst p) (snd p))
+        |AutoLogonSettings r ->
+            unwrapRegistryResult r.defaultDomainName |> Option.iter (fun p -> printfn "Domain: %s" <| snd p)
+            unwrapRegistryResult r.defaultUserName |> Option.iter(fun p -> printfn "Username: %s" <| snd p)
+            unwrapRegistryResult r.defaultPassword |> Option.iter(fun p -> printfn "Password: %s" <| snd p)
+            unwrapRegistryResult r.altDefaultDomainName |> Option.iter (fun p -> printfn "AltDomain: %s" <| snd p)
+            unwrapRegistryResult r.altDefaultUserName |> Option.iter(fun p -> printfn "AltUsername: %s" <| snd p)
+            unwrapRegistryResult r.altDefaultPassword |> Option.iter(fun p -> printfn "AltPassword: %s" <| snd p)
+            printfn ""
+        |AutorunSetting r ->
+            printfn "%s" r.location
+            unwrapRegistryResult r.value |> Option.iter(fun p -> printfn "Name: %s\nValue: %s" (fst p)(snd p))
+            printfn ""
+        |HistoryIE r ->
+            printfn "Original path: %s" r.path
+            unwrapRegistryResult r.url |> Option.iter(fun p -> printfn "URL: %s" <| snd p) 
+        |InternetSettings r ->
+            unwrapRegistryResult r.proxyServer |> Option.iter(fun p -> printfn "Proxy Server: %s" <| snd p)
+            unwrapRegistryResult r.proxyEnable |> Option.iter(fun p -> printfn "Proxy Enabled: %s" <| snd p)
+            unwrapRegistryResult r.proxyOverride |> Option.iter(fun p -> printfn "Proxy Override: %s" <| snd p)
+            printfn ""
+        |LapsSettings r ->
+            unwrapRegistryResult r.lapsAdminAccountName |> Option.iter(fun p -> printfn "LAPS Admin account: %s" <| snd p)
+            unwrapRegistryResult r.lapsPasswordLength |> Option.iter(fun p -> printfn "Password length: %s" <| snd p)
+            unwrapRegistryResult r.lapsPasswordComplexity |> Option.iter(fun p -> printfn "Pass Complexity: %s" <| snd p)
+            unwrapRegistryResult r.lapsPasswdProtection |> Option.iter(fun p -> printfn "Pass Protection: %s" <| snd p)
+            printfn ""
+        |LSASettings r ->
+            unwrapRegistryResult r.lsaPid |> Option.iter(fun p -> printfn "LSA Pid: %s" <| snd p)
+            unwrapRegistryResult r.prodType |> Option.iter(fun p -> printfn "Product type: %s" <| snd p)
+            unwrapRegistryResult r.authorizationPkgs |> Option.iter(fun p -> printfn "Auth packages: %s" <| snd p)
+            unwrapRegistryResult r.disdomcreds |> Option.iter(fun p -> printfn "Disable Domain creds: %s" <| snd p)
+            unwrapRegistryResult r.everyoneAnon |> Option.iter(fun p -> printfn "Everyone Anonymous: %s" <| snd p)
+            unwrapRegistryResult r.forceGuest |> Option.iter(fun p -> printfn "Force Guest: %s" <| snd p)
+            unwrapRegistryResult r.limitBlankPwd |> Option.iter(fun p -> printfn "Limit Blank Passwords: %s" <| snd p)
+            unwrapRegistryResult r.notificationPkgs |> Option.iter(fun p -> printfn "Notification packages: %s" <| snd p)
+            unwrapRegistryResult r.restrictAnon |> Option.iter(fun p -> printfn "Restrict Anonymous Accounts: %s" <| snd p)
+            unwrapRegistryResult r.restrictSAM |> Option.iter(fun p -> printfn "Restrict to SAM: %s" <| snd p)
+            unwrapRegistryResult r.samConnAccnt |> Option.iter(fun p -> printfn "SAM Connected Accounts Exist: %s" <| snd p)
+            unwrapRegistryResult r.secureboot |> Option.iter(fun p -> printfn "Secure Boot: %s" <| snd p)
+        |PuttyHostPublicKeys r ->
+            unwrapRegistryResult r.recentHostKeys |> Option.iter(fun p -> printfn "Host key: %s" <| snd p)
+        |PuttySSHSession r ->
+            unwrapRegistryResult r.username |> Option.iter(fun p -> printfn "Username: %s" <| snd p)
+            unwrapRegistryResult r.hostname |> Option.iter(fun p -> printfn "Hostname: %s" <| snd p)
+            unwrapRegistryResult r.portForwardings |> Option.iter(fun p -> printfn "Port Forwarding: %s" <| snd p)
+            unwrapRegistryResult r.connectionSharing |> Option.iter(fun p -> printfn "Connection Sharing: %s" <| snd p)
+            unwrapRegistryResult r.publicKeyFile |> Option.iter(fun p -> printfn "Public Key File: %s" <| snd p)
+        |PowerShellEnv r ->
+            unwrapRegistryResult r.poshVersion2 |> Option.iter(fun p -> printfn "PowerShell2: %s" <| snd p)
+            unwrapRegistryResult r.poshVersion5 |> Option.iter(fun p -> printfn "PowerShell2+: %s" <| snd p)
+            r.poshSLog |> List.iter(fun x -> unwrapRegistryResult x |> Option.iter (fun p -> printfn "Scriptblock Logging Setting: %s" <| snd p))
+            r.poshTLog |> List.iter(fun x -> unwrapRegistryResult x |> Option.iter (fun p -> printfn "Transcription Logging Setting: %s" <| snd p))
+            r.poshMLog |> List.iter(fun x -> unwrapRegistryResult x |> Option.iter (fun p -> printfn "Module Logging Setting: %s" <| snd p))
+            printfn ""
+        |RDPSavedConnection r ->
+            printfn "Remotehost: %s" r.host
+            unwrapRegistryResult r.usernameHint |> Option.iter(fun p -> printfn "Username Hint: %s" <| snd p)
+            printfn ""
+        |RecentCommand r ->
+            unwrapRegistryResult r.recentCommand |> Option.iter(fun p -> printfn "Recent Command: %s" <| snd p)
+            printfn ""
+        |SysmonConfig r ->
+            unwrapRegistryResult r.rules |> Option.iter(fun p -> printfn "Rules: %s" <| snd p)
+            unwrapRegistryResult r.hashingAlgorithm |> Option.iter(fun p -> printfn "Hashing algorithm: %s" <| snd p)
+            unwrapRegistryResult r.options |> Option.iter(fun p -> printfn "Options: %s" <| snd p)
+            printfn ""
+        |UACPolicies r ->
+            unwrapRegistryResult r.consentPromptBehavior |> Option.iter(fun p -> printfn "Consent Prompt Behavior: %s" <| snd p)
+            unwrapRegistryResult r.enableLUA |> Option.iter(fun p -> printfn "Enable LUA: %s" <| snd p)
+            unwrapRegistryResult r.filterAdministratorToken |> Option.iter(fun p -> printfn "Local Account Token Filter Policy: %s" <| snd p)
+            unwrapRegistryResult r.localAccountTokenFilterPolicy |> Option.iter(fun p -> printfn "Filter Administrator Token: %s" <| snd p)
+            printfn ""
+        |WEFSettings r ->
+            r.policies |> List.iter(fun x -> unwrapRegistryResult x |> Option.iter(fun p -> printfn "Name: %s\nValue: %s" (fst p) (snd p )))
+            printfn ""
 
 
     let printSRecord record = 
@@ -233,8 +358,6 @@
             |None -> printfn "No release ID retrieved"
 
 
-
-
     let printWRecord record = 
         match record with
         |AV r ->
@@ -249,8 +372,8 @@
             printfn "SID + Name: %s\%s" r.sid r.name
             printfn "Members:"
             match r.members with
-            |Some r -> r |> List.iter (printfn "%s")
-            |None -> printf "No members"
+            |x when x.Length > 0  -> x |> List.iter (printfn "%s")
+            |_ -> printf "No members"
             printfn ""
         |MappedDrive r ->
             printfn "Share name: %s" r.localName
