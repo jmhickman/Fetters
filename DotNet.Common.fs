@@ -107,7 +107,7 @@ module Fetters.DotNet.Common
 
 
     let splitPrint (text1:string, text2:string) = 
-        let spacer = Console.WindowWidth - (text1.Length + text2.Length)
+        let spacer = Console.WindowWidth - (text1.Length + text2.Length) - 1
         printfn "%s%*s%s" text1 spacer "" text2
 
     
@@ -233,6 +233,7 @@ module Fetters.DotNet.Common
         match record with
         |AuditSettings r ->
             unwrapRegistryResult r.processauditing |> Option.iter(fun p -> printfn "%s\n%s" (fst p) (snd p))
+            printfn ""
         |AutoLogonSettings r ->
             unwrapRegistryResult r.defaultDomainName |> Option.iter (fun p -> printfn "Domain: %s" <| snd p)
             unwrapRegistryResult r.defaultUserName |> Option.iter(fun p -> printfn "Username: %s" <| snd p)
@@ -247,7 +248,8 @@ module Fetters.DotNet.Common
             printfn ""
         |HistoryIE r ->
             printfn "Original path: %s" r.path
-            unwrapRegistryResult r.url |> Option.iter(fun p -> printfn "URL: %s" <| snd p) 
+            unwrapRegistryResult r.url |> Option.iter(fun p -> printfn "URL: %s" <| snd p)
+            printfn ""
         |InternetSettings r ->
             unwrapRegistryResult r.proxyServer |> Option.iter(fun p -> printfn "Proxy Server: %s" <| snd p)
             unwrapRegistryResult r.proxyEnable |> Option.iter(fun p -> printfn "Proxy Enabled: %s" <| snd p)
@@ -283,9 +285,21 @@ module Fetters.DotNet.Common
         |PowerShellEnv r ->
             unwrapRegistryResult r.poshVersion2 |> Option.iter(fun p -> printfn "PowerShell2: %s" <| snd p)
             unwrapRegistryResult r.poshVersion5 |> Option.iter(fun p -> printfn "PowerShell2+: %s" <| snd p)
-            r.poshSLog |> List.iter(fun x -> unwrapRegistryResult x |> Option.iter (fun p -> printfn "Scriptblock Logging Setting: %s" <| snd p))
-            r.poshTLog |> List.iter(fun x -> unwrapRegistryResult x |> Option.iter (fun p -> printfn "Transcription Logging Setting: %s" <| snd p))
-            r.poshMLog |> List.iter(fun x -> unwrapRegistryResult x |> Option.iter (fun p -> printfn "Module Logging Setting: %s" <| snd p))
+            r.poshSLog 
+            |> List.iter(fun x -> 
+                unwrapRegistryResult x 
+                |> Option.iter (fun p -> 
+                printfn "%s: %s" (fst p) (snd p)))
+            r.poshTLog 
+            |> List.iter(fun x -> 
+                unwrapRegistryResult x 
+                |> Option.iter (fun p -> 
+                    printfn "%s: %s" (fst p) (snd p)))
+            r.poshMLog 
+            |> List.iter(fun x -> 
+                unwrapRegistryResult x 
+                |> Option.iter (fun p -> 
+                printfn "%s: %s" (fst p) (snd p)))
             printfn ""
         |RDPSavedConnection r ->
             printfn "Remotehost: %s" r.host
@@ -431,9 +445,7 @@ module Fetters.DotNet.Common
             printfn "User SID: %s" r.sid
             r.groups |> List.iter(fun rr -> printfn "SID: %s Name: %s" (fst rr) (snd rr))
             printfn ""
-
-
-
+        
 
     /////////////////////////////////////
     //Common Windows User/Group functions

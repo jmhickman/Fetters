@@ -547,6 +547,13 @@ module Fetters.DomainTypes
         groups : (string * string) list
         }
 
+    //type LogonSession = {
+    //    name : string
+    //    logonId : string
+    //    logonType : string
+    //    authPkg : string
+    //    }
+
     type WmiQueryType = {
         wmiSqlQuery: string
         wmiFilterList: string list
@@ -566,6 +573,7 @@ module Fetters.DomainTypes
         |SProcess
         |SService
         |SUser
+        //|SLogonSession
     
     type WmiRecord = 
         |AV of AntiVirus
@@ -577,6 +585,7 @@ module Fetters.DomainTypes
         |Patch of Patch
         |Process of Process
         |User of User
+        //|LogonSession of LogonSession
 
 
     ///////////////

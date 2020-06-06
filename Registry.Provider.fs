@@ -289,7 +289,9 @@ module Fetters.Registry.Provider
         
 
     let private getInternetExplorerHistoryValues (rKey: RegistryKey) (name: string ) : HistoryIE =
-        {path = rKey.Name; url = getRegistryValue name rKey}
+        let sidOnly = rKey.Name.Split('\\') |> Array.take 2
+
+        {path = sprintf "%s\%s" sidOnly.[0] sidOnly.[1] ; url = getRegistryValue name rKey}
 
 
     let getInternetExplorerHistory () : FettersRegistryRecord list = 

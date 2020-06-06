@@ -53,7 +53,7 @@ module Fetters.WMI.Provider
         |SProcess -> ObjectQuery "SELECT * FROM Win32_Process WHERE NOT Name LIKE '%svchost%' AND NOT Name LIKE '%conhost%'"
         |SService -> new ObjectQuery "SELECT * FROM win32_service WHERE NOT PathName LIKE '%svchost%' AND NOT PathName LIKE '%conhost%' "
         |SUser -> new ObjectQuery "SELECT * FROM Win32_Account where SidType=1"
-
+        //|SLogonSession -> new ObjectQuery "SELECT * FROM Win32_LogonSession"
 
     let private createObjectSearcher (connectedScope: ManagementScope) objectQuery = 
         new ManagementObjectSearcher(connectedScope, objectQuery)
@@ -71,6 +71,7 @@ module Fetters.WMI.Provider
             |SProcess -> ["Name";"ProcessId";"ExecutablePath";"CommandLine"]
             |SService -> ["Name";"DisplayName";"Description";"State";"StartMode";"PathName"]
             |SUser -> ["Name";"Domain";"SID"]
+            //|SLogonSession -> ["Name";"LogonId";"LogonType";"AuthenticationPackage"]
         
         let wmiResults = mObjectSearcher.Get()
         {rawListofList = 
@@ -179,6 +180,16 @@ module Fetters.WMI.Provider
                     groups = getCurrentUsersGroups ()
                 } 
                 user |> WmiRecord.User)
+        //|SLogonSession ->
+        //    rawResult.rawListofList
+        //    |> List.map(fun rawList ->
+        //       let lsession = {
+        //            name = rawList.[0]
+        //            logonId = rawList.[1]
+        //            logonType = rawList.[2]
+        //            authPkg = rawList.[3]
+        //        }
+        //        lsession |> WmiRecord.LogonSession)
 
 
     let queryWMI 
