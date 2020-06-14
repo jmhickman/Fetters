@@ -74,7 +74,6 @@ let rec createArgumentRecord args (initArgs:ProgramArguments) : ProgramArguments
 
 let printTerseHelp () =
     "Fetters: Windows System Enumeration" |> centerPrintN |> printfn "%s"
-    "A port of Seatbelt in F# under Apache Public License v2" |> centerPrintN |> printfn "%s"
     "Release 2" |> centerPrintN |> printfn "%s"
     printfn "\n\n"
     "fetters [groupname]" |> leftTenthPrint |> printfn "%s"
@@ -96,7 +95,6 @@ let printTerseHelp () =
 
 let printFullHelp () =
     "Fetters: Windows System Enumeration" |> centerPrintN |> printfn "%s"
-    "A port of Seatbelt in F#" |> centerPrintN |> printfn "%s"
     "Release 2" |> centerPrintN |> printfn "%s"
     printfn "\n\n"
     "Full help" |> leftTenthPrint |> cPrinter Green
