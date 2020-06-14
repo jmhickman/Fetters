@@ -1,0 +1,21 @@
+Original/C# References
+Seatbelt! As a port from C# to F#, I relied extensively on Seatbelt for form and essence of implementation
+https://stackoverflow.com/questions/33935825/pinvoke-netlocalgroupgetmembers-runs-into-fatalexecutionengineerror/33939889#33939889
+https://github.com/djhohnstein/SharpWeb/blob/master/Edge/SharpEdge.cs
+https://stackoverflow.com/questions/2146153/how-to-get-the-logon-sid-in-c-sharp/2146418#2146418 <- Not directly used, but influenced the form of `GetTokenPrivInformation`
+https://stackoverflow.com/questions/4349743/setting-size-of-token-privileges-luid-and-attributes-array-returned-by-gettokeni
+https://github.com/vletoux/MakeMeEnterpriseAdmin/blob/master/MakeMeEnterpriseAdmin.ps1#L2939-L2950
+https://www.dreamincode.net/forums/topic/135033-increment-memory-pointer-issue/
+https://github.com/Invoke-IR/ACE/blob/master/ACE-Management/PS-ACE/Scripts/ACE_Get-KerberosTicketCache.ps1
+http://www.pinvoke.net/default.aspx/wtsapi32.wtsenumeratesessions
+https://social.technet.microsoft.com/Forums/lync/en-US/e949b8d6-17ad-4afc-88cd-0019a3ac9df9/powershell-alternative-to-arp-a?forum=ITCG
+https://github.com/gentilkiwi/mimikatz
+https://github.com/chrismaddalena/SharpCloud/
+
+
+F# References
+Scott Wlaskin - His book "Domain Driven Design" and numerous snippets and ideas from https://www.fsharpforfunandprofit.com
+Vincent Yiu - https://vincentyiu.com/red-team/cve-exploitation/f-shellcode-execution
+WUtils.com - various snippets and just as a reference for WMI searches
+For explaining how to reference/dereference in F# in a way that made any sense at all - https://pblasucci.wordpress.com/2012/07/23/managing-pointers-or-fs-platform-invoke-gotcha/
+

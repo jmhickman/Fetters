@@ -30,8 +30,7 @@ module Fetters.WMI.Provider
 
 
     let private initializeManagementScope path : ManagementScope = 
-        let mpath = new ManagementPath(path)
-        let mScope = new ManagementScope(mpath)
+        let mScope = new ManagementPath(path) |> fun x -> new ManagementScope(x)
         mScope
 
 
@@ -53,7 +52,7 @@ module Fetters.WMI.Provider
         |SProcess -> ObjectQuery "SELECT * FROM Win32_Process WHERE NOT Name LIKE '%svchost%' AND NOT Name LIKE '%conhost%'"
         |SService -> new ObjectQuery "SELECT * FROM win32_service WHERE NOT PathName LIKE '%svchost%' AND NOT PathName LIKE '%conhost%' "
         |SUser -> new ObjectQuery "SELECT * FROM Win32_Account where SidType=1"
-        //|SLogonSession -> new ObjectQuery "SELECT * FROM Win32_LogonSession"
+        
 
     let private createObjectSearcher (connectedScope: ManagementScope) objectQuery = 
         new ManagementObjectSearcher(connectedScope, objectQuery)
@@ -180,17 +179,7 @@ module Fetters.WMI.Provider
                     groups = getCurrentUsersGroups ()
                 } 
                 user |> WmiRecord.User)
-        //|SLogonSession ->
-        //    rawResult.rawListofList
-        //    |> List.map(fun rawList ->
-        //       let lsession = {
-        //            name = rawList.[0]
-        //            logonId = rawList.[1]
-        //            logonType = rawList.[2]
-        //            authPkg = rawList.[3]
-        //        }
-        //        lsession |> WmiRecord.LogonSession)
-
+        
 
     let queryWMI 
         (semaphore: WmiSemaphore)
@@ -198,7 +187,7 @@ module Fetters.WMI.Provider
         initializeManagementScope <| localScope semaphore 
         |> fun cs -> 
             match connectManagementScope cs with
-            |Some xu -> 
+            |Some _ -> 
                 createObjectQuery semaphore 
                 |> createObjectSearcher cs 
                 |> generateRawWMIResult semaphore 

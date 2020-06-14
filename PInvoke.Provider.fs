@@ -619,16 +619,6 @@ module Fetters.PInvoke.Provider
     //// advapi32 ////
     
     [<DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)>]
-    extern bool LogonUser(
-        string lpszUsername,
-        string lpszDomain,
-        string lpszPassword, 
-        int dwLogonType, 
-        int dwLogonProvider, 
-        [<Out>] IntPtr& phToken
-        )
-
-    [<DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)>]
     extern bool OpenProcessToken(
         IntPtr processHandle, 
         uint32 desiredAccess, 
@@ -708,9 +698,7 @@ module Fetters.PInvoke.Provider
     [<DllImport("kernel32.dll")>]
     extern bool CloseHandle(IntPtr handle)
 
-    [<DllImport("kernel32.dll")>]
-    extern IntPtr LocalFree(IntPtr hMem)
-
+    
     //// NetApi32 ////
 
     [<DllImport("Netapi32.dll")>]
@@ -721,9 +709,9 @@ module Fetters.PInvoke.Provider
     extern int NetLocalGroupGetMembers(
         string serverName, 
         string localGroupName, 
-        int level, // 2
+        int level,
         [<Out>] IntPtr& bufptr,
-        int prefmaxlen, // -1
+        int prefmaxlen, 
         [<Out>] int& entriesRead,
         [<Out>] int& totalEntries,
         [<Out>] IntPtr resumeHandle
@@ -900,7 +888,7 @@ module Fetters.PInvoke.Provider
     let private populateRdpSessionStructs ppSessionBaseAddr count : WTS_SESSION_INFO_1[] =
         let mutable ppSBA = ppSessionBaseAddr
         [|0..(count - 1)|] 
-        |> Array.map(fun c -> 
+        |> Array.map(fun _ -> 
             let wtsSessionInfo = Marshal.PtrToStructure<WTS_SESSION_INFO_1>(ppSBA)
             ppSBA <- IntPtr.Add(ppSBA, Marshal.SizeOf<WTS_SESSION_INFO_1>())
             wtsSessionInfo)
@@ -975,7 +963,7 @@ module Fetters.PInvoke.Provider
         let mutable bPtr = bufferPtr
         
         [|0..(entriesRead - 1)|] 
-        |> Array.map(fun c -> 
+        |> Array.map(fun _ -> 
             let mstruct = Marshal.PtrToStructure<LOCAL_GROUP_MEMBER_INFO2>(bPtr)
             bPtr <- IntPtr.Add(bPtr, Marshal.SizeOf<LOCAL_GROUP_MEMBER_INFO2>())
             mstruct)
@@ -1106,7 +1094,7 @@ module Fetters.PInvoke.Provider
         let mutable (LUIDPtr _luidPtr) = luidPtr
         let sessionData = 
             [|1..int(count)|]
-            |> Array.map(fun count -> 
+            |> Array.map(fun _ -> 
                 LsaGetLogonSessionData(_luidPtr, &sessionDataPtr) |> ignore
                 let sessionData = Marshal.PtrToStructure<SECURITY_LOGON_SESSION_DATA>(sessionDataPtr)
                 _luidPtr <- IntPtr.Add(_luidPtr, Marshal.SizeOf<LUID>())
@@ -1134,21 +1122,21 @@ module Fetters.PInvoke.Provider
         authPkg |> LsaAuthPackage
 
     
-    let private getKerberosTicketResponse lsaHandle aPkg kerbReq : (IntPtr * KerberosResponse) option = 
+    let private getKerberosTicketResponse lsaHandle authPkg kerbReq : (IntPtr * KerberosResponse) option = 
         //Returns a KERB response, depending on the type of KERB request submitted
         let mutable ticketPtr = IntPtr.Zero
         let mutable returnBufferLength = 0
         let mutable protocolStatus = 0
-
-        let mutable (LsaProcessHandle lsaHandle) = lsaHandle
-        let mutable (LsaAuthPackage aPkg) = aPkg
+        
+        let mutable (LsaProcessHandle _lsaHandle) = lsaHandle
+        let mutable (LsaAuthPackage _aPkg) = authPkg
         
         match kerbReq with
         |KERB_QUERY_TKT_CACHE_REQ kReq -> 
             let mutable _kReq = kReq
             LsaCallAuthenticationPackage_CACHE(
-                lsaHandle, 
-                aPkg, 
+                _lsaHandle, 
+                _aPkg, 
                 _kReq, 
                 Marshal.SizeOf(_kReq),
                 &ticketPtr,
@@ -1168,8 +1156,8 @@ module Fetters.PInvoke.Provider
         |KERB_RETRIEVE_TKT_REQ kReq -> 
             let mutable _kReq = kReq
             LsaCallAuthenticationPackage_RET(
-                lsaHandle, 
-                aPkg, 
+                _lsaHandle, 
+                _aPkg, 
                 _kReq, 
                 Marshal.SizeOf(_kReq),
                 &ticketPtr,
@@ -1192,7 +1180,7 @@ module Fetters.PInvoke.Provider
         |KERB_QUERY_TKT_CACHE_RESP ticket -> 
             [0..(ticket.countOfTickets - 1)] 
             |> List.map(fun count -> 
-                Marshal.PtrToStructure<KERB_TICKET_CACHE_INFO>(IntPtr.Add(ticketPtr, (8+ (count * 64)))) 
+                Marshal.PtrToStructure<KERB_TICKET_CACHE_INFO>(IntPtr.Add(ticketPtr, (8 + (count * 64)))) 
                 |> KERB_TKT_CACHE_INFO)
         |KERB_RETRIEVE_TKT_RESP x -> 
             [Marshal.PtrToStructure<KERB_EXTERNAL_TICKET>(ticketPtr) |> KERB_EXTERNAL_TKT] 
@@ -1387,7 +1375,7 @@ module Fetters.PInvoke.Provider
         VaultEnumerateItems(vaultHandle, 512, &vaultItemCount, &vaultItem) |>ignore
         let vaultItems =
             [0..(vaultItemCount - 1)]
-            |> List.map(fun x -> 
+            |> List.map(fun _ -> 
                 match Environment.OSVersion.Version.Build with
                 | x when x > 7601 -> 
                     let vaultStruct = Marshal.PtrToStructure<VAULT_ITEM_WIN8>(vaultItem)
@@ -1529,7 +1517,7 @@ module Fetters.PInvoke.Provider
                 let tcpTable = Marshal.PtrToStructure<MIB_TCPTABLE_OWNER_MODULE>(tPtr)
                 let mutable rowPtr = IntPtr.Add(tPtr, Marshal.SizeOf<MIB_TCPTABLE_OWNER_MODULE>())
                 [0u..(tcpTable.numEntries - 1u)]
-                |> List.map(fun x -> 
+                |> List.map(fun _ -> 
                     let rowStruct = Marshal.PtrToStructure<MIB_TCPROW_OWNER_MODULE>(rowPtr)
                     rowPtr <- IntPtr.Add(rowPtr, Marshal.SizeOf<MIB_TCPROW_OWNER_MODULE>())
                     rowStruct)
@@ -1555,7 +1543,8 @@ module Fetters.PInvoke.Provider
     let enumerateTCPConnections () : FettersPInvokeRecord list =
         getTcpTable () 
         |> getTcpTableRows 
-        |> List.map(fun x -> createTCPRecord x |> FettersPInvokeRecord.TCPConnection)
+        |> List.map(fun x -> 
+            createTCPRecord x |> FettersPInvokeRecord.TCPConnection)
 
     ///////////////////////////
     //UDP conection enumeration
@@ -1595,7 +1584,7 @@ module Fetters.PInvoke.Provider
                 let udpTable = Marshal.PtrToStructure<MIB_UDPTABLE_OWNER_MODULE>(tPtr)
                 let mutable rowPtr = IntPtr.Add(tPtr, Marshal.SizeOf<MIB_UDPTABLE_OWNER_MODULE>())
                 [0u..(udpTable.numEntries - 1u)]
-                |> List.map(fun x -> 
+                |> List.map(fun _ -> 
                     let rowStruct = Marshal.PtrToStructure<MIB_UDPROW_OWNER_MODULE>(rowPtr)
                     rowPtr <- IntPtr.Add(rowPtr, Marshal.SizeOf<MIB_UDPROW_OWNER_MODULE>())
                     rowStruct)
@@ -1618,7 +1607,8 @@ module Fetters.PInvoke.Provider
     let enumerateUDPConnections () : FettersPInvokeRecord list =
         getUdpTable () 
         |> getUdpTableRows 
-        |> List.map(fun x -> createUdpRecord x |> FettersPInvokeRecord.UDPListener)
+        |> List.map(fun x -> 
+            createUdpRecord x |> FettersPInvokeRecord.UDPListener)
 
     ///////////////////////
     //Arp Table Enumeration
@@ -1637,7 +1627,7 @@ module Fetters.PInvoke.Provider
         tRowPtr <- IntPtr.Add(tablePtr, 4)
         let arpTableByIndexResult = 
             [0..int(tcpTable.numEntries)- 1]
-            |> List.map(fun x -> 
+            |> List.map(fun _ -> 
                 let tcpRow = Marshal.PtrToStructure<MIB_IPNETROW>(tRowPtr)
                 tRowPtr <- IntPtr.Add(tRowPtr, Marshal.SizeOf<MIB_IPNETROW>())
                 tcpRow)
@@ -1685,7 +1675,7 @@ module Fetters.PInvoke.Provider
         //ptr and retrieve string. Free the buffer, repeat.
         let privList = 
             [0u..(tokenPrivs.privilegeCount - 1u)]
-            |> List.map(fun count ->  
+            |> List.map(fun _ ->  
                 let mutable cchName = 0
                 let mutable stringPtr = IntPtr.Zero
                 LookupPrivilegeName("", privPtr, stringPtr, &cchName) |> ignore

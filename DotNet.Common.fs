@@ -35,7 +35,7 @@ module Fetters.DotNet.Common
     ///////////////////////
     //Common Misc Functions    
     ///////////////////////
-
+    
     let createStopWatch () =
         new Stopwatch()
 
@@ -441,7 +441,7 @@ module Fetters.DotNet.Common
             printfn "Process arguments: %s" r.processInvocation
             printfn "Owner: %s\n" r.processOwner
         |User r ->
-            printfn "Current UPN: %s\%s" r.domain r.name
+            printfn "UPN: %s\%s" r.domain r.name
             printfn "User SID: %s" r.sid
             r.groups |> List.iter(fun rr -> printfn "SID: %s Name: %s" (fst rr) (snd rr))
             printfn ""
