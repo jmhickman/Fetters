@@ -22,7 +22,7 @@ I'm likely to ignore PRs, at least for the time being. This represented 2 months
 
 ## Requirements
 
-I've tested Fetters on 64bit Windows *10* 1703 and later, Server *2012*, Windows *7* and Windows *8.1*. *Net 4.61 or later* must be present. While many checks should work if run in 32 bit mode, there is PInvoke code that, for various reasons, has statically set pointer math that will probably make things angry with smaller IntPtrs. I don't have a 32bit Windows lying around to check.
+I've tested Fetters on 64bit Windows **10** 1703 and later, Server **2012**, Windows **7** and Windows **8.1**. **Net 4.61 or later** must be present. While many checks should work if run in 32 bit mode, there is PInvoke code that, for various reasons, has statically set pointer math that will probably make things angry with smaller IntPtrs. I don't have a 32bit Windows lying around to check.
 
 ## Build
 
