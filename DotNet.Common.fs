@@ -137,7 +137,6 @@ module Fetters.DotNet.Common
                 printfn "Ticket: %s" t.base64EncodedTicket)
             
     
-    
     let regValuePrint regV =
         match regV with
         |String s -> sprintf "%s" s
@@ -456,10 +455,8 @@ module Fetters.DotNet.Common
     // This is linked to the privileges on the token, not necessarily the literal groups
     // the user is in. An administrative user will still come back False if their token
     // is not elevated, so be aware of the difference.
-
         WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(role)
-        
-
+   
     //Convenience alias for testing if the process is high integrity
     let isHighIntegrity () = getCurrentRole WindowsBuiltInRole.Administrator
 
@@ -476,14 +473,14 @@ module Fetters.DotNet.Common
         //sensible output. This alternative is native .Net and in my testing
         //did the business.
         //let sid = getTokenGroupSIDs () 
-        let sid = [for c in WindowsPrincipal(WindowsIdentity.GetCurrent()).Claims do yield c]
-        sid |> List.map(fun s -> s.Value) |> List.contains("S-1-5-32-544")
+        let sids = [for c in WindowsPrincipal(WindowsIdentity.GetCurrent()).Claims do yield c]
+        sids |> List.map(fun s -> s.Value) |> List.contains("S-1-5-32-544")
 
     ///////////////////////////
     //Common Registry Functions
     ///////////////////////////
     
-    let getRegistryKey (hive: RegHive) (path: string) : RegistryKey option =
+    let getRegistryKey hive path : RegistryKey option =
         //Because Windows, invalid Registry Keys return null instead of an 
         //error. So I have to do this awkward stuff because 'Some null' is,
         //hilariously, valid.
@@ -507,7 +504,7 @@ module Fetters.DotNet.Common
     let getThrowawayKey = Registry.CurrentUser.OpenSubKey("Software")
 
     
-    let getRegistrySubKeyNames (hive: RegHive) (path: string) : string []  =
+    let getRegistrySubKeyNames hive path : string []  =
         match hive with
         |HKEY_LOCAL_MACHINE -> 
             let rKey = Registry.LocalMachine.OpenSubKey(path)
@@ -535,7 +532,7 @@ module Fetters.DotNet.Common
     //// Get Registry values ////
 
     let getRegistryValue 
-        (name: string) (key: RegistryKey) : RegistryResult option =
+        name (key: RegistryKey) : RegistryResult option =
         //This doesn't take an RegistryKey option because I don't want to reach
         //this function with Nones. There's no point.
         let extractType 
@@ -565,7 +562,7 @@ module Fetters.DotNet.Common
  
     
     //// Gather Sub Keys ////
-    let private collectHighIntegritySubKeysHKU (path: string) =
+    let private collectHighIntegritySubKeysHKU path =
         getRegistrySubKeyNamesHKU ""
         |> Array.filter(fun x ->  x.StartsWith("S-1-5") && not (x.Contains("_Classes")))
         |> Array.map(fun sidPath -> 
@@ -576,14 +573,14 @@ module Fetters.DotNet.Common
             not (fs |> Array.isEmpty))
 
  
-    let private collectLowIntegritySubKeys (path: string) =
+    let private collectLowIntegritySubKeys path =
         match getRegistrySubKeyNamesHKCU path with
         | xa when xa.Length > 0 -> [|(HKEY_CURRENT_USER, path, xa)|]
         | _ -> [|(HKEY_CURRENT_USER, path, [||])|]
         
     
     //// Gather Registry Names ////
-    let private collectHighIntegrityNames (hive: RegHive) (path: string) : (RegistryKey * string [])[] =
+    let private collectHighIntegrityNames hive path : (RegistryKey * string array) array =
         getRegistrySubKeyNames hive ""
         |> Array.filter(fun x ->  x.StartsWith("S-1-5") && not (x.Contains("_Classes")))
         |> Array.map(fun sidPath -> 
@@ -593,22 +590,18 @@ module Fetters.DotNet.Common
             not ( snd f |> Array.isEmpty))
 
 
-    let collectLowIntegrityNames (hive: RegHive) (path: string) : (RegistryKey * string [])[] =
+    let collectLowIntegrityNames hive path : (RegistryKey * string array) array  =
         let rKey = getRegistryKey hive path |> extractRegistryKey
         [|rKey, rKey.GetValueNames()|]
         
         
-    let retrieveSubKeysByIntegrity (path: string) : (RegHive * string * string[])[] =
+    let retrieveSubKeysByIntegrity path : (RegHive * string * string array) array =
         match isHighIntegrity () with
         |true -> collectHighIntegritySubKeysHKU path
         |false -> collectLowIntegritySubKeys path
 
 
-    let retrieveNamesByIntegrity 
-        (hiveHigh: RegHive)
-        (hiveLow: RegHive)
-        (path: string) 
-        : (RegistryKey * string[])[] =
+    let retrieveNamesByIntegrity hiveHigh hiveLow path : (RegistryKey * string[])[] =
         match isHighIntegrity () with
         |true -> collectHighIntegrityNames hiveHigh path
         |false -> collectLowIntegrityNames hiveLow path
@@ -624,7 +617,7 @@ module Fetters.DotNet.Common
         sprintf "%s\\" <| Environment.GetEnvironmentVariable("SystemDrive")
     
     
-    let getLocalUserFolders (sysroot: string) : string array =
+    let getLocalUserFolders sysroot : string array =
         //Instead of computing the list of local user directories we have
         //access to over and over, build the list once and be done with it.
         let userRoot = sysroot + "Users\\"
@@ -641,19 +634,19 @@ module Fetters.DotNet.Common
 
 
     //// File IO helpers ////
-    let listChildFiles (path: string) : string array =
+    let listChildFiles path : string array =
         Directory.GetFiles(path)
 
     
-    let listChildDirectories (path: string) : string array = 
+    let listChildDirectories path : string array = 
         Directory.GetDirectories(path)
 
 
-    let fileExistsAtLocation (path: string) : bool =
+    let fileExistsAtLocation path : bool =
         File.Exists(path)
 
     
-    let dirExistsAtLocation (path: string) : bool =
+    let dirExistsAtLocation path : bool =
         Directory.Exists(path)
 
     
@@ -672,14 +665,11 @@ module Fetters.DotNet.Common
         | _ -> false
 
 
-    //let isQuotedPath path : ServiceBinaryPath =
-        
-
-    let openFileReader (path: string) : FileStream =
+    let openFileReader path : FileStream =
         File.OpenRead(path)
 
 
-    let openStreamReader (path: string) : StreamReader option =
+    let openStreamReader path : StreamReader option =
         //utilize with 'use' keyword so that it closes once it leaves scope
         try 
             let fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite) 
@@ -693,17 +683,18 @@ module Fetters.DotNet.Common
         new StreamReader(dummy)
 
     
-    let yieldLineSequence (path: string) : string seq =
-        seq{ use sr = 
-                match openStreamReader path with
-                |Some sr -> sr
-                |None -> nullStream ()
+    let yieldLineSequence path : string seq =
+        seq{use sr = 
+               match openStreamReader path with
+               |Some sr -> sr
+               |None -> nullStream ()
         
-             while not sr.EndOfStream do 
-             yield sr.ReadLine()}
+            while not sr.EndOfStream do 
+            yield sr.ReadLine()
+            }
 
     
-    let yieldWholeFile (path: string) : string =
+    let yieldWholeFile path : string =
         use sr = 
             match openStreamReader path with
             |Some sr -> sr
@@ -746,21 +737,21 @@ module Fetters.DotNet.Common
         Convert.ToBase64String(bArray)
 
 
-    let encodeEntireFileB64 (path: string) : string = 
+    let encodeEntireFileB64 path : string = 
         yieldWholeFile path |> createByteArray |> createb64String
 
     ////////////////////////////
     //Common Event Log Functions  
     ////////////////////////////
 
-    let createEventQuery (log: string) (query: string) =
+    let createEventQuery log query =
         let ev = new EventLogQuery(log, PathType.LogName, query)
         ev.ReverseDirection = true |> ignore
         ev
 
     
-    let eventFilter x =
-        filteredEventAccounts |> List.contains(x)
+    let eventFilter account =
+        filteredEventAccounts |> List.contains(account)
 
     
     let createEventLogReader (q: EventLogQuery) = 

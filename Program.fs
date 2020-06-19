@@ -455,5 +455,5 @@ let main sysargs =
     |> List.iter(matchFunctionAndRun init.luserFolders init.highIntegrity init.now init.windowWeek)
     
     w |> stopWatch
-    sprintf "Elapsed Time: %i" <| w.ElapsedMilliseconds |> gPrinter Bang |> cPrinter Red
+    sprintf "Elapsed Time: %ims" <| w.ElapsedMilliseconds |> gPrinter Bang |> cPrinter Red
     0

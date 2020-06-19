@@ -1012,8 +1012,7 @@ module Fetters.PInvoke.Provider
         let impersonationResult = 
             match (OpenProcessToken(sysProcess.Handle, 0x0002u, &procHandle) &&
                    DuplicateToken(procHandle, 2, &dupToken) &&
-                   ImpersonateLoggedOnUser(dupToken)) 
-                   with
+                   ImpersonateLoggedOnUser(dupToken)) with
             |true -> sprintf "Impersonating %s" <| WindowsIdentity.GetCurrent().Name |> gPrinter Plus |> cPrinter Green
             |false -> sprintf "Failed to impersonate SYSTEM, error: %i" <| Marshal.GetLastWin32Error() |> gPrinter Bang |> cPrinter Red
 
@@ -1032,7 +1031,7 @@ module Fetters.PInvoke.Provider
             false
 
     let private getSystem () = 
-        //Impersonate the NTAUTHORITY\SYSTEM user for the purposes of high integrity actions.
+        //Impersonate the NTAUTHORITY\SYSTEM user in order to access sensitive processes.
         match isHighIntegrity () with
         | true -> impersonateSystem ()
         | false -> sprintf "Current role cannot escalate privileges" |> gPrinter Minus |> cPrinter Red
@@ -1461,8 +1460,8 @@ module Fetters.PInvoke.Provider
     let enumerateUserVaults () : FettersPInvokeRecord list =
         enumerateVaults ()
         |> openVault 
-        |> List.map(fun v -> enumerateVaultItems v)
-        |> List.map(fun v -> createVaultRecord v)
+        |> List.map enumerateVaultItems
+        |> List.map createVaultRecord
         |> List.concat
         |> List.map FettersPInvokeRecord.VaultRecord
 
@@ -1474,10 +1473,11 @@ module Fetters.PInvoke.Provider
     let private getServiceNameInfo pid serviceTag : string option =
         let mutable serviceTagQuery = SC_SERVICE_TAG_QUERY(processId = pid, serviceTag = serviceTag)
         
-        let retcode = I_QueryTagInformation(
-                        IntPtr.Zero, 
-                        SC_SERVICE_TAG_QUERY_TYPE.ServiceNameFromTagInformation, 
-                        &serviceTagQuery)
+        let retcode = 
+            I_QueryTagInformation(
+                IntPtr.Zero, 
+                SC_SERVICE_TAG_QUERY_TYPE.ServiceNameFromTagInformation, 
+                &serviceTagQuery)
         match retcode with
         | x when x = 0u ->  Marshal.PtrToStringAuto(serviceTagQuery.buffer) |> Some
         | _ -> None
@@ -1543,8 +1543,8 @@ module Fetters.PInvoke.Provider
     let enumerateTCPConnections () : FettersPInvokeRecord list =
         getTcpTable () 
         |> getTcpTableRows 
-        |> List.map(fun x -> 
-            createTCPRecord x |> FettersPInvokeRecord.TCPConnection)
+        |> List.map createTCPRecord 
+        |> List.map FettersPInvokeRecord.TCPConnection
 
     ///////////////////////////
     //UDP conection enumeration
@@ -1565,13 +1565,13 @@ module Fetters.PInvoke.Provider
         match tableBufferSize with
         |x when x > 0u -> 
             tablePtr <- Marshal.AllocHGlobal(int(tableBufferSize))
-            let retcode = GetExtendedUdpTable(
-                            tablePtr, 
-                            &tableBufferSize, 
-                            true, 
-                            2, 
-                            UDP_TABLE_CLASS.UDP_TABLE_OWNER_MODULE, 
-                            0) |> ignore
+            GetExtendedUdpTable(
+                tablePtr, 
+                &tableBufferSize, 
+                true, 
+                2, 
+                UDP_TABLE_CLASS.UDP_TABLE_OWNER_MODULE, 
+                0) |> ignore
             tablePtr |> Some
         | _ -> Marshal.FreeHGlobal(tablePtr)
                None
@@ -1607,8 +1607,8 @@ module Fetters.PInvoke.Provider
     let enumerateUDPConnections () : FettersPInvokeRecord list =
         getUdpTable () 
         |> getUdpTableRows 
-        |> List.map(fun x -> 
-            createUdpRecord x |> FettersPInvokeRecord.UDPListener)
+        |> List.map createUdpRecord
+        |> List.map FettersPInvokeRecord.UDPListener
 
     ///////////////////////
     //Arp Table Enumeration

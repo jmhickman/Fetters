@@ -83,8 +83,7 @@ module Fetters.DotNet.Provider
         //this is implemented differently than the Chrome enumeration.
         let cPath = path + "\\" + "AppData\\Roaming\\Mozilla\\Firefox\\Profiles\\"
         match dirExistsAtLocation cPath with
-        |true -> let dirs = listChildDirectories cPath
-                 dirs 
+        |true -> listChildDirectories cPath 
                  |> Array.map (fun d -> d + "\\places.sqlite")
                  |> Array.filter(fun d -> fileExistsAtLocation d)
         |false -> [||]
@@ -96,12 +95,10 @@ module Fetters.DotNet.Provider
             let rgx = createMatchRegex @"(http|ftp|https|file)://([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-]\s)?"
             let res = yieldLineSequence path  |> Seq.map (matchStringRegex rgx) |> Seq.toList |> List.filter(fun l -> not(l = ""))
             {path = path; url = res}
-
         |false -> {path = ""; url = []}
 
     let triageFirefox path : FettersFilesystemRecord =
         let fpath = getFirefoxProfiles path |> Array.map extractFirefoxHistory |> Array.toList
-        
         {history = fpath} |> FettersFilesystemRecord.FirefoxInfo
 
     ///////////////////
@@ -175,10 +172,7 @@ module Fetters.DotNet.Provider
         
         filteredRules
         |> List.map(fun fR -> 
-            let pList = 
-                firewallPropertyNames
-                |> List.map(fun pN -> 
-                    getFirewallAttr fR pN)
+            let pList = firewallPropertyNames |> List.map (getFirewallAttr fR)
             {name = pList.[0]
              description = pList.[1]
              protocol = pList.[2]
@@ -205,7 +199,7 @@ module Fetters.DotNet.Provider
 
     let getDPAPIMasterKeys userFolders : FettersFilesystemRecord list =
         userFolders
-        |> Array.map(fun u -> u + "\\" + "AppData\\Roaming\\Microsoft\\Protect\\")
+        |> Array.map (sprintf "%s\\AppData\\Roaming\\Microsoft\\Protect\\") 
         |> Array.filter dirExistsAtLocation
         |> Array.map listChildDirectories
         |> Array.concat
@@ -224,7 +218,7 @@ module Fetters.DotNet.Provider
         
     let getDPAPICredFiles userFolders : FettersFilesystemRecord list =
         userFolders
-        |> Array.map(fun u -> u + "\\" + "AppData\\Local\\Microsoft\\Credentials\\")
+        |> Array.map (sprintf "%s\\AppData\\Local\\Microsoft\\Credentials\\")
         |> Array.filter dirExistsAtLocation
         |> Array.map listChildFiles
         |> Array.concat
@@ -239,7 +233,7 @@ module Fetters.DotNet.Provider
 
     let detectRDCManFile userFolders : string list =
         userFolders
-        |> Array.map(fun u -> u + "\\" + "AppData\\Local\\Microsoft\\Remote Desktop Connection Manager\\RDCMan.settings")
+        |> Array.map (sprintf "%s\\AppData\\Local\\Microsoft\\Remote Desktop Connection Manager\\RDCMan.settings")
         |> Array.filter fileExistsAtLocation
         |> Array.map (sprintf "Remote Desktop Manager connection file exists at %s")
         |> Array.toList
@@ -247,7 +241,7 @@ module Fetters.DotNet.Provider
 
     let getGoogleCloudCreds userFolders : FettersFilesystemRecord list =
         userFolders
-        |> Array.map(fun u -> u + "\\" + "AppData\\Roaming\\gcloud\\credentials.db")
+        |> Array.map (sprintf "%s\\AppData\\Roaming\\gcloud\\credentials.db")
         |> Array.filter fileExistsAtLocation
         |> Array.map(fun f -> 
             {GoogleCredential.path = f; encodedFile = encodeEntireFileB64 f}
@@ -257,7 +251,7 @@ module Fetters.DotNet.Provider
 
     let getGoogleCloudCredsL userFolders : FettersFilesystemRecord list =
         userFolders
-        |> Array.map(fun u -> u + "\\" + "AppData\\Roaming\\gcloud\\legacy_credentials.db")
+        |> Array.map (sprintf "%s\\AppData\\Roaming\\gcloud\\legacy_credentials.db")
         |> Array.filter fileExistsAtLocation
         |> Array.map(fun f -> 
             {GoogleCredential.path = f; encodedFile = encodeEntireFileB64 f}
@@ -267,7 +261,7 @@ module Fetters.DotNet.Provider
     
     let getGoogleAccessTokens userFolders : FettersFilesystemRecord list =
         userFolders
-        |> Array.map(fun u -> u + "\\" + "AppData\\Roaming\\gcloud\\access_tokens.db")
+        |> Array.map (sprintf "%s\\AppData\\Roaming\\gcloud\\access_tokens.db")
         |> Array.filter fileExistsAtLocation
         |> Array.map(fun f -> 
             {GoogleCredential.path = f; encodedFile = encodeEntireFileB64 f}
@@ -277,7 +271,7 @@ module Fetters.DotNet.Provider
     
     let getAzureTokens userFolders : FettersFilesystemRecord list =
         userFolders
-        |> Array.map(fun u -> u + "\\" + ".azure\\accessTokens.json")
+        |> Array.map (sprintf "%s\\.azure\\accessTokens.json")
         |> Array.filter fileExistsAtLocation
         |> Array.map(fun f -> 
             {AzureCredential.path = f; encodedFile = encodeEntireFileB64 f}
@@ -287,7 +281,7 @@ module Fetters.DotNet.Provider
 
     let getAzureProfile userFolders : FettersFilesystemRecord list =
         userFolders
-        |> Array.map(fun u -> u + "\\" + ".azure\\azureProfile.json")
+        |> Array.map (sprintf "%s\\.azure\\accessProfile.json")
         |> Array.filter fileExistsAtLocation
         |> Array.map(fun f -> 
             {AzureCredential.path = f; encodedFile = encodeEntireFileB64 f}
@@ -297,7 +291,7 @@ module Fetters.DotNet.Provider
 
     let getAWSCreds userFolders : FettersFilesystemRecord list =
         userFolders
-        |> Array.map(fun u -> u + "\\" + ".aws\\credentials")
+        |> Array.map (sprintf "%s\\.aws\\credentials")
         |> Array.filter fileExistsAtLocation
         |> Array.map(fun f -> 
             {AWSCredential.path = f; encodedFile = encodeEntireFileB64 f}

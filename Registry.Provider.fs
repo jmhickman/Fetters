@@ -26,7 +26,6 @@ module Fetters.Registry.Provider
     //// Local Administrator Password Solution Enum ////
     let getLAPSSettings () : FettersRegistryRecord =
         //Test to see if LAPS is present/configured, and if so, pull some data
-        //Will return a None since we test if the key is even present first
         let rKey = extractRegistryKey <| getRegistryKeyHKLM "Software\\Policies\\Microsoft Services\\AdmPwd"
         
         {lapsAdminAccountName = getRegistryValue "AdminAccountName" rKey
@@ -39,8 +38,6 @@ module Fetters.Registry.Provider
     //// Windows Automatic Logon Enum ////
     let getAutoLogonSettings () : FettersRegistryRecord =
         //Test to see if any autologon settings exist on the system.
-        //Will return a Some even if the contents are None, since this key is
-        //a default Windows key.
         let rKey = extractRegistryKey <| getRegistryKeyHKLM "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon"
         
         {defaultDomainName = getRegistryValue "DefaultDomainName" rKey
@@ -95,8 +92,8 @@ module Fetters.Registry.Provider
             pArray
             |> Array.map(fun p -> getRDPSavedConnection hive path p))
             |> Array.concat
-            |> Array.toList
-            |> List.map FettersRegistryRecord.RDPSavedConnection
+        |> Array.toList
+        |> List.map FettersRegistryRecord.RDPSavedConnection
 
 
     //// MRU Commands Enum ////         
@@ -146,22 +143,22 @@ module Fetters.Registry.Provider
             |> Array.map(fun (rKey, pArray) -> 
                 pArray
                 |> Array.map(fun p -> getRegistryValue p rKey))
-                |> Array.concat
-                |> Array.toList
+            |> Array.concat
+            |> Array.toList
         let pshellMLog = 
             collectLowIntegrityNames HKEY_LOCAL_MACHINE "SOFTWARE\\Policies\\Microsoft\\Windows\\PowerShell\\ModuleLogging"
             |> Array.map(fun (rKey, pArray) -> 
                 pArray
                 |> Array.map(fun p -> getRegistryValue p rKey))
-                |> Array.concat
-                |> Array.toList
+            |> Array.concat
+            |> Array.toList
         let pshellSLog = 
             collectLowIntegrityNames HKEY_LOCAL_MACHINE "SOFTWARE\\Policies\\Microsoft\\Windows\\PowerShell\\ScriptBlockLogging"
             |> Array.map(fun (rKey, pArray) -> 
                 pArray
                 |> Array.map(fun p -> getRegistryValue p rKey))
-                |> Array.concat
-                |> Array.toList
+            |> Array.concat
+            |> Array.toList
 
         {poshVersion2 = pshellver2
          poshVersion5 = pshellver5
