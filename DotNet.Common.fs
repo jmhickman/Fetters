@@ -442,7 +442,6 @@ module Fetters.DotNet.Common
         |User r ->
             printfn "UPN: %s\%s" r.domain r.name
             printfn "User SID: %s" r.sid
-            r.groups |> List.iter(fun rr -> printfn "SID: %s Name: %s" (fst rr) (snd rr))
             printfn ""
         
 
