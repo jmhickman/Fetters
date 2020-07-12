@@ -194,7 +194,7 @@ let matchFunctionAndRun (uFolders: string array) highBool now week (func: string
     
     |"getwefsettings" -> 
         printfn ""
-        "===== Windows Event Forwarding Settings (if set) =====" |> centerPrint |> printfn "%s"
+        "===== Windows Event Forwarding Settings =====" |> centerPrint |> printfn "%s"
         getWEFSettings () |> printRRecord
     
     |"getlsasettings" -> 
@@ -246,7 +246,7 @@ let matchFunctionAndRun (uFolders: string array) highBool now week (func: string
     
     |"getautologonsettings" -> 
         printfn ""
-        "===== Autologon Settings (if present) =====" |> centerPrint |> printfn "%s"
+        "===== Autologon Settings =====" |> centerPrint |> printfn "%s"
         getAutoLogonSettings () |> printRRecord
     
     |"getautorunvalues" -> 
@@ -301,32 +301,32 @@ let matchFunctionAndRun (uFolders: string array) highBool now week (func: string
     
     |"getgooglecloudcreds"  -> 
         printfn ""
-        "===== Google Cloud Creds (if any) =====" |> centerPrint |> printfn "%s"
+        "===== Google Cloud Creds =====" |> centerPrint |> printfn "%s"
         uFolders |> getGoogleCloudCreds  |> List.iter printFRecord
     
     |"getgooglecloudcredsl" -> 
         printfn ""
-        "===== Google Cloud Creds Legacy Location (if any) ====="|> centerPrint |> printfn "%s"
+        "===== Google Cloud Creds Legacy Location ====="|> centerPrint |> printfn "%s"
         uFolders |> getGoogleCloudCredsL |> List.iter printFRecord
     
     |"getgoogleaccesstokens" -> 
         printfn ""
-        "===== Google Access Tokens (if any) ====="|> centerPrint |> printfn "%s"
+        "===== Google Access Tokens ====="|> centerPrint |> printfn "%s"
         uFolders |> getGoogleAccessTokens |> List.iter printFRecord
     
     |"getazuretokens" -> 
         printfn ""
-        "===== Azure Tokens (if any) ====="|> centerPrint |> printfn "%s"
+        "===== Azure Tokens ====="|> centerPrint |> printfn "%s"
         uFolders |> getAzureTokens |> List.iter printFRecord
     
     |"getazureprofile" -> 
         printfn ""
-        "===== Azure Profiles (if any) ====="|> centerPrint |> printfn "%s"
+        "===== Azure Profiles ====="|> centerPrint |> printfn "%s"
         uFolders |> getAzureProfile |> List.iter printFRecord
     
     |"getawscreds" ->
         printfn ""
-        "===== AWS credentials (if any) ====="|> centerPrint |> printfn "%s"
+        "===== AWS credentials ====="|> centerPrint |> printfn "%s"
         uFolders |> getAWSCreds |> List.iter printFRecord
     
     |"getrdpsavedconnections" -> 
@@ -403,22 +403,22 @@ let matchFunctionAndRun (uFolders: string array) highBool now week (func: string
     
     |"querywmi-user" -> 
         printfn ""
-        "===== Current User Enumeration (WMI) =====" |> centerPrint |> printfn "%s"
+        "===== Current User Enumeration =====" |> centerPrint |> printfn "%s"
         queryWMI SUser |> List.iter printWRecord
     
     |"querywmi-process" -> 
         printfn ""
-        "===== Windows Processes (WMI) =====" |> centerPrint |> printfn "%s"
+        "===== Windows Processes =====" |> centerPrint |> printfn "%s"
         queryWMI SProcess |> List.iter printWRecord
     
     |"querywmi-service" -> 
         printfn ""
-        "===== Installed Services (WMI) =====" |> centerPrint |> printfn "%s"
+        "===== Installed Services =====" |> centerPrint |> printfn "%s"
         queryWMI SService |> List.iter printWRecord
     
     |"querywmi-patches" -> 
         printfn ""
-        "===== Installed Patches (WMI) =====" |> centerPrint |> printfn "%s"
+        "===== Installed Patches =====" |> centerPrint |> printfn "%s"
         queryWMI SPatches |> List.iter printWRecord
     
     |_ -> printf ""
