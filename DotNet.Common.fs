@@ -247,7 +247,7 @@ module Fetters.DotNet.Common
             printfn ""
         |HistoryIE r ->
             printfn "Original path: %s" r.path
-            unwrapRegistryResult r.url |> Option.iter(fun p -> printfn "URL: %s" <| snd p)
+            unwrapRegistryResult r.url |> Option.iter(fun p -> sprintf "URL: %s\n" <| snd p |> gPrinter Plus |> cPrinter Green)
             printfn ""
         |InternetSettings r ->
             unwrapRegistryResult r.proxyServer |> Option.iter(fun p -> printfn "Proxy Server: %s" <| snd p)
