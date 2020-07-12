@@ -151,7 +151,7 @@ let printFullHelp () =
     ("getputtysessions", "Lists PuTTY session information from registry") |> splitPrint
     ("getputtyhostkeys", "Lists public keys from remembered hosts") |> splitPrint
     ("getinternetexplorerhistory", "Lists IE history items") |> splitPrint
-    ("enumerateuservaults", "Dumps all accessible Windows Vault contents") |> splitPrint
+    //("enumerateuservaults", "Dumps all accessible Windows Vault contents") |> splitPrint
     ("enumeratedomainsessions", "Dumps Session and Kerberos TGT/Cached ticket data") |> splitPrint
     printfn ""
     "'extra' checks" |> gPrinter Asterisk |> cPrinter Green 
@@ -354,10 +354,11 @@ let matchFunctionAndRun (uFolders: string array) highBool now week (func: string
         "===== IE History (Reg) =====" |> centerPrint |> printfn "%s"
         getInternetExplorerHistory () |> List.iter printRRecord
     
-    |"enumerateuservaults" -> 
-        printfn ""
-        "===== Windows Vault Contents =====" |> centerPrint |> printfn "%s"
-        enumerateUserVaults () |> List.iter printPRecord
+    // Not convinced this is working correctly, will need to get to the bottom of it
+    //|"enumerateuservaults" -> 
+    //    printfn ""
+    //    "===== Windows Vault Contents =====" |> centerPrint |> printfn "%s"
+    //    enumerateUserVaults () |> List.iter printPRecord
     
     |"enumeratedomainsessions" -> enumerateDomainSessions () |> List.iter printPRecord 
     

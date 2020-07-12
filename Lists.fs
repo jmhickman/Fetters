@@ -151,7 +151,7 @@ module Fetters.Lists
         "getlocalarptables" 
         "enumerateudpconnections" 
         "enumeratetcpconnections" 
-        "enumerateuservaults" 
+        //"enumerateuservaults" 
         "enumeratedomainsessions" 
         "getlocalgroupmembership" 
         "enumeraterdpsessions" 
@@ -206,7 +206,7 @@ module Fetters.Lists
         "getputtysessions"
         "getputtyhostkeys"
         "getinternetexplorerhistory"
-        "enumerateuservaults"
+        //"enumerateuservaults"
         "enumeratedomainsessions"
         ]
 
