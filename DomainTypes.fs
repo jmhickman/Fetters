@@ -544,7 +544,6 @@ module Fetters.DomainTypes
         name : string
         domain : string
         sid: string
-        groups : (string * string) list
         }
 
     //type LogonSession = {

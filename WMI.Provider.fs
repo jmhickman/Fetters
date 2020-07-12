@@ -176,7 +176,6 @@ module Fetters.WMI.Provider
                     name = rawList.[0]
                     domain = rawList.[1]
                     sid = rawList.[2]
-                    groups = getCurrentUsersGroups ()
                 } 
                 user |> WmiRecord.User)
         
